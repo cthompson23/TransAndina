@@ -1,17 +1,20 @@
 package com.transandina.flotilla.ui.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -20,8 +23,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,267 +40,232 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.transandina.flotilla.data.model.RolUsuario
+
+// Paleta de la marca Trasandina
+private val NavyBackground = Color(0xFF13263F)
+private val OrangeAccent = Color(0xFFBB6B2E)
+private val FieldBackground = Color(0xFFFFFFFF)
+private val FieldPlaceholder = Color(0xFF8A8A8A)
+private val LinkTextColor = Color(0xFFE7E7E7)
 
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel = viewModel(),
-    onLoginExitoso: () -> Unit,
-    onRegistrar: () -> Unit = {},
-    onRecuperarContrasena: () -> Unit = {}
+    onLoginExitoso: (RolUsuario) -> Unit,
+    onRecuperarContrasena: () -> Unit = {},
+    onRegistrarse: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var passwordVisible by remember { mutableStateOf(false) }
 
-    var mostrarPassword by remember { mutableStateOf(false) }
-
-    // Colores de la pantalla
-    val azulOscuro = Color(0xFF0D2948)
-    val naranja = Color(0xFFD26320)
-    val blanco = Color(0xFFFFFFFF)
-    val grisClaro = Color(0xFFD0D3D8)
-    val grisPlaceholder = Color(0xFF9DA3AC)
-
-    LaunchedEffect(uiState.autenticado) {
-        if (uiState.autenticado) {
-            onLoginExitoso()
-        }
+    LaunchedEffect(uiState.autenticado, uiState.rol) {
+        val rol = uiState.rol
+        if (uiState.autenticado && rol != null) onLoginExitoso(rol)
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(azulOscuro)
-            .padding(horizontal = 36.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(NavyBackground)
     ) {
-
-        // ------------------------------------------------
-        // LOGO / NOMBRE
-        // ------------------------------------------------
-        Spacer(modifier = Modifier.height(115.dp))
-
-        Text(
-            text = "TransAndina",
-            color = naranja,
-            fontSize = 40.sp,
-            fontFamily = FontFamily.Serif,
-            fontWeight = FontWeight.Normal
-        )
-
-        Spacer(modifier = Modifier.height(62.dp))
-
-        // ------------------------------------------------
-        // TÍTULO
-        // ------------------------------------------------
-        Text(
-            text = "Iniciar sesión",
-            color = blanco,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(62.dp))
-
-        // ------------------------------------------------
-        // CORREO
-        // ------------------------------------------------
         Column(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(64.dp))
+
             Text(
-                text = "Correo electrónico",
-                color = grisClaro,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(bottom = 7.dp)
+                text = "TransAndina",
+                fontFamily = FontFamily.Serif,
+                fontSize = 34.sp,
+                color = OrangeAccent,
+                textAlign = TextAlign.Center
             )
 
-            OutlinedTextField(
+            Spacer(modifier = Modifier.height(40.dp))
+
+            Text(
+                text = "Iniciar sesión",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            LabeledField(
+                label = "Correo electrónico",
                 value = uiState.email,
                 onValueChange = viewModel::onEmailChange,
-                placeholder = {
-                    Text(
-                        text = "ejemplo@correo.com",
-                        color = grisPlaceholder,
-                        fontSize = 12.sp
-                    )
-                },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = blanco,
-                    unfocusedContainerColor = blanco,
-                    focusedBorderColor = naranja,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedTextColor = Color.DarkGray,
-                    unfocusedTextColor = Color.DarkGray
-                )
-            )
-        }
-
-        Spacer(modifier = Modifier.height(15.dp))
-
-        // ------------------------------------------------
-        // CONTRASEÑA
-        // ------------------------------------------------
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = "Contraseña",
-                color = grisClaro,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(bottom = 7.dp)
+                placeholder = "ejemplo@correo.com",
+                keyboardType = KeyboardType.Email
             )
 
-            OutlinedTextField(
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LabeledField(
+                label = "Contraseña",
                 value = uiState.password,
                 onValueChange = viewModel::onPasswordChange,
-                placeholder = {
-                    Text(
-                        text = "Escribir la contraseña",
-                        color = grisPlaceholder,
-                        fontSize = 12.sp
-                    )
-                },
-                singleLine = true,
-                visualTransformation = if (mostrarPassword) {
+                placeholder = "Escribir la contraseña",
+                keyboardType = KeyboardType.Password,
+                visualTransformation = if (passwordVisible) {
                     VisualTransformation.None
                 } else {
                     PasswordVisualTransformation()
                 },
                 trailingIcon = {
-                    IconButton(
-                        onClick = {
-                            mostrarPassword = !mostrarPassword
-                        }
-                    ) {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
-                            imageVector = if (mostrarPassword) {
-                                Icons.Default.Visibility
+                            imageVector = if (passwordVisible) {
+                                Icons.Filled.VisibilityOff
                             } else {
-                                Icons.Default.VisibilityOff
+                                Icons.Filled.Visibility
                             },
-                            contentDescription = "Mostrar contraseña",
-                            tint = Color.DarkGray
+                            contentDescription = if (passwordVisible) {
+                                "Ocultar contraseña"
+                            } else {
+                                "Mostrar contraseña"
+                            },
+                            tint = FieldPlaceholder
                         )
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = blanco,
-                    unfocusedContainerColor = blanco,
-                    focusedBorderColor = naranja,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedTextColor = Color.DarkGray,
-                    unfocusedTextColor = Color.DarkGray
-                )
-            )
-        }
-
-        // ------------------------------------------------
-        // RECUPERAR CONTRASEÑA
-        // ------------------------------------------------
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.End
-        ) {
-            Text(
-                text = "Recuperar contraseña",
-                color = grisClaro,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.clickable {
-                    onRecuperarContrasena()
                 }
             )
-        }
 
-        Spacer(modifier = Modifier.height(42.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        // ------------------------------------------------
-        // ERROR
-        // ------------------------------------------------
-        uiState.error?.let {
-            Text(
-                text = it,
-                color = Color(0xFFFF8A80),
-                fontSize = 12.sp,
-                modifier = Modifier.padding(bottom = 10.dp)
-            )
-        }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onRecuperarContrasena) {
+                    Text(
+                        text = "Recuperar contraseña",
+                        color = LinkTextColor,
+                        fontSize = 13.sp
+                    )
+                }
+            }
 
-        Button(
-            onClick = viewModel::iniciarSesion,
-            enabled = !uiState.cargando,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = naranja,
-                disabledContainerColor = naranja.copy(alpha = 0.6f)
-            )
-        ) {
-            if (uiState.cargando) {
-                CircularProgressIndicator(
-                    modifier = Modifier.height(20.dp),
-                    color = blanco,
-                    strokeWidth = 2.dp
-                )
-            } else {
+            uiState.error?.let {
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Ingresar",
-                    color = blanco,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
-        }
-        Spacer(modifier = Modifier.weight(1f))
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(bottom = 60.dp)
-        ) {
-            Text(
-                text = "¿No tienes una cuenta?",
-                color = blanco,
-                fontSize = 11.sp
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = onRegistrar,
-                modifier = Modifier.height(38.dp),
-                shape = RoundedCornerShape(9.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    horizontal = 13.dp
-                ),
+                onClick = viewModel::iniciarSesion,
+                enabled = !uiState.cargando,
+                shape = RoundedCornerShape(28.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = naranja
-                )
+                    containerColor = OrangeAccent,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+            ) {
+                if (uiState.cargando) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White
+                    )
+                } else {
+                    Text(
+                        text = "Ingresar",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Regístrate aquí",
-                    color = blanco,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    text = "¿No tienes una cuenta?",
+                    color = Color.White,
+                    fontSize = 13.sp
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = onRegistrarse,
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = OrangeAccent,
+                        contentColor = Color.White
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "Regístrate aquí",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+@Composable
+private fun LabeledField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailingIcon: @Composable (() -> Unit)? = null
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 14.sp
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            placeholder = { Text(text = placeholder, color = FieldPlaceholder) },
+            visualTransformation = visualTransformation,
+            trailingIcon = trailingIcon,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            shape = RoundedCornerShape(24.dp),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = FieldBackground,
+                unfocusedContainerColor = FieldBackground,
+                disabledContainerColor = FieldBackground,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                cursorColor = OrangeAccent
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

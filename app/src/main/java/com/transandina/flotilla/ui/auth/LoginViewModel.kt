@@ -2,7 +2,9 @@ package com.transandina.flotilla.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.transandina.flotilla.data.model.RolUsuario
 import com.transandina.flotilla.data.repository.AuthRepository
+import com.transandina.flotilla.data.repository.UsuarioRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -13,11 +15,13 @@ data class LoginUiState(
     val password: String = "",
     val cargando: Boolean = false,
     val error: String? = null,
-    val autenticado: Boolean = false
+    val autenticado: Boolean = false,
+    val rol: RolUsuario? = null
 )
 
 class LoginViewModel(
-    private val authRepository: AuthRepository = AuthRepository()
+    private val authRepository: AuthRepository = AuthRepository(),
+    private val usuarioRepository: UsuarioRepository = UsuarioRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -42,7 +46,23 @@ class LoginViewModel(
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
                 authRepository.iniciarSesion(estadoActual.email, estadoActual.password)
-                _uiState.update { it.copy(cargando = false, autenticado = true) }
+
+                // Necesitamos el rol ANTES de navegar, para saber qué
+                // pantalla y qué menú mostrarle a este usuario.
+                val usuarioId = authRepository.usuarioActualId()
+                val rol = usuarioId?.let { usuarioRepository.obtenerPerfil(it)?.rol }
+
+                if (rol == null) {
+                    _uiState.update {
+                        it.copy(
+                            cargando = false,
+                            error = "Tu cuenta no tiene un perfil registrado. Contacta al encargado de flota."
+                        )
+                    }
+                    return@launch
+                }
+
+                _uiState.update { it.copy(cargando = false, autenticado = true, rol = rol) }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(cargando = false, error = "Credenciales inválidas o sin conexión")
