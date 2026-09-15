@@ -17,9 +17,28 @@ class AuthRepository {
             this.password = password
         }
     }
+    suspend fun registrarUsuario(email: String, password: String) {
+        SupabaseProvider.client.auth.signUpWith(Email) {
+            this.email = email
+            this.password = password
+        }
+    }
 
     suspend fun cerrarSesion() {
         SupabaseProvider.client.auth.signOut()
+    }
+
+    suspend fun enviarCorreoRecuperacion(email: String) {
+        SupabaseProvider.client.auth.resetPasswordForEmail(
+            email = email,
+            redirectUrl = "transandina://reset-password"
+        )
+    }
+
+    suspend fun actualizarContrasena(nuevaPassword: String) {
+        SupabaseProvider.client.auth.updateUser {
+            password = nuevaPassword
+        }
     }
 
     fun usuarioActualId(): String? =

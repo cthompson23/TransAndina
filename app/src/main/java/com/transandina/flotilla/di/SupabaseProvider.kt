@@ -13,7 +13,10 @@ object SupabaseProvider {
         supabaseUrl = "https://jeqaibzvjfamqnssycln.supabase.co",
         supabaseKey = "sb_publishable_rvqQIYtaXlOh8XeuLu7D1Q_HBSdV4Mm"
     ) {
-        install(Auth)
+        install(Auth){
+            scheme = "transandina"
+            host = "reset-password"
+        }
         install(Postgrest)
     }
 }
