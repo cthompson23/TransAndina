@@ -1,58 +1,94 @@
 package com.transandina.flotilla.ui.theme
 
-import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+// La app es solo tema claro y sin dynamic color: los colores de marca
+// (navy y naranja) no pueden cambiar según el fondo de pantalla del teléfono.
+private val EsquemaClaro = lightColorScheme(
+    primary = Navy,
+    onPrimary = Superficie,
+    primaryContainer = Navy,
+    onPrimaryContainer = Superficie,
+    secondary = Naranja,
+    onSecondary = Superficie,
+    secondaryContainer = Naranja,
+    onSecondaryContainer = Superficie,
+    tertiary = Verde,
+    onTertiary = Superficie,
+    background = Fondo,
+    onBackground = Navy,
+    surface = Superficie,
+    onSurface = Navy,
+    surfaceVariant = SuperficieSuave,
+    onSurfaceVariant = TextoSecundario,
+    outline = Placeholder,
+    outlineVariant = Placeholder,
+    error = Rojo,
+    onError = Superficie,
+    errorContainer = Rojo,
+    onErrorContainer = Superficie
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+/**
+ * Colores del Figma que Material 3 no cubre con su esquema estándar.
+ * Se usan como `TransAndinaTheme.colores.verde`, etc.
+ */
+@Immutable
+data class ColoresTransAndina(
+    val naranjaLogo: Color,
+    val verde: Color,
+    val grisBoton: Color,
+    val rojo: Color,
+    val superficieSuave: Color,
+    val textoSecundario: Color,
+    val textoTerciario: Color,
+    val placeholder: Color,
+    val estadoOk: Color,
+    val estadoAviso: Color,
+    val estadoCritico: Color,
+    val estadoInfo: Color
 )
+
+private val ColoresClaros = ColoresTransAndina(
+    naranjaLogo = NaranjaLogo,
+    verde = Verde,
+    grisBoton = GrisBoton,
+    rojo = Rojo,
+    superficieSuave = SuperficieSuave,
+    textoSecundario = TextoSecundario,
+    textoTerciario = TextoTerciario,
+    placeholder = Placeholder,
+    estadoOk = EstadoOk,
+    estadoAviso = EstadoAviso,
+    estadoCritico = EstadoCritico,
+    estadoInfo = EstadoInfo
+)
+
+private val LocalColoresTransAndina = staticCompositionLocalOf { ColoresClaros }
+
+/** Acceso a los colores extendidos dentro de cualquier composable del tema. */
+object TransAndinaTheme {
+    val colores: ColoresTransAndina
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalColoresTransAndina.current
+}
 
 @Composable
-fun TransAndinaFlotillaTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
-) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+fun TransAndinaFlotillaTheme(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalColoresTransAndina provides ColoresClaros) {
+        MaterialTheme(
+            colorScheme = EsquemaClaro,
+            typography = Typography,
+            shapes = Shapes,
+            content = content
+        )
     }
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
 }

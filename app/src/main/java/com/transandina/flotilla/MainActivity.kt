@@ -9,7 +9,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -47,6 +46,7 @@ import com.transandina.flotilla.ui.navigation.BottomNavItem
 import com.transandina.flotilla.ui.navigation.itemsParaRol
 import com.transandina.flotilla.ui.notificaciones.NotificacionesScreen
 import com.transandina.flotilla.ui.perfil.PerfilScreen
+import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
 import com.transandina.flotilla.ui.vehiculo.VehiculoScreen
 import io.github.jan.supabase.auth.handleDeeplinks
 
@@ -89,7 +89,7 @@ class MainActivity : ComponentActivity() {
         )
         manejarPosibleDeepLink(intent)
         setContent {
-            MaterialTheme {
+            TransAndinaFlotillaTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     AppNavigation(
                         deepLinkRecuperacion = deepLinkRecuperacion,
