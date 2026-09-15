@@ -10,17 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,18 +21,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.transandina.flotilla.data.model.Vehiculo
+import com.transandina.flotilla.ui.components.ChipEstado
+import com.transandina.flotilla.ui.components.DatoEtiquetado
+import com.transandina.flotilla.ui.components.EstadoVacio
+import com.transandina.flotilla.ui.components.NivelEstado
+import com.transandina.flotilla.ui.components.TarjetaTransAndina
+import com.transandina.flotilla.ui.components.TransAndinaTopBar
+import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
+import com.transandina.flotilla.ui.theme.TransAndinaTheme
 
-// Colores de TransAndina
-private val AzulTransAndina = Color(0xFF13263F)
-private val GrisFondo = Color(0xFFD9D9D9)
-private val Blanco = Color(0xFFFFFFFF)
-private val TextoPrincipal = Color(0xFF0C2340)
-private val TextoSecundario = Color(0xFF8A8A8A)
-
+/** Detalle del vehículo del conductor (Figma `28:418` y `87:135`). */
 @Composable
 fun VehiculoScreen(
     viewModel: VehiculoViewModel = viewModel(),
@@ -50,283 +45,59 @@ fun VehiculoScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(GrisFondo)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-
-        // =========================
-        // HEADER
-        // =========================
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp)
-                .background(AzulTransAndina),
-            contentAlignment = Alignment.Center
-        ) {
-
-            // Botón volver
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Volver",
-                    tint = Blanco
-                )
-            }
-
-            Text(
-                text = "TransAndina",
-                color = Blanco,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        // =========================
-        // CONTENIDO
-        // =========================
+        TransAndinaTopBar(
+            titulo = "Mi vehículo",
+            subtitulo = uiState.vehiculo?.let { "${it.placa} · ${it.marca} ${it.modelo}" },
+            onAtras = onBack
+        )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(
-                    horizontal = 18.dp,
-                    vertical = 24.dp
-                )
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
         ) {
-
             when {
-
-                // Cargando
                 uiState.cargando && uiState.vehiculo == null -> {
-
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(
-                            color = AzulTransAndina
-                        )
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
 
-                // Sin vehículo
                 uiState.vehiculo == null -> {
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Blanco
-                        ),
-                        elevation = CardDefaults.cardElevation(
-                            defaultElevation = 0.dp
+                    TarjetaTransAndina {
+                        EstadoVacio(
+                            mensaje = uiState.error ?: "No tienes un vehículo asignado"
                         )
-                    ) {
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-
-                            Icon(
-                                imageVector = Icons.Default.DirectionsCar,
-                                contentDescription = null,
-                                tint = AzulTransAndina,
-                                modifier = Modifier.size(40.dp)
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Text(
-                                text = uiState.error
-                                    ?: "No tienes un vehículo asignado",
-                                color = TextoPrincipal,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
                     }
                 }
 
-                // Vehículo encontrado
                 else -> {
-
                     val vehiculo = uiState.vehiculo!!
 
-                    // =========================
-                    // TARJETA DEL VEHÍCULO
-                    // =========================
+                    TarjetaInformacion(vehiculo = vehiculo)
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Blanco
-                        ),
-                        elevation = CardDefaults.cardElevation(
-                            defaultElevation = 0.dp
-                        )
-                    ) {
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                        Column(
-                            modifier = Modifier.padding(18.dp)
-                        ) {
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-
-                                // Icono
-                                Box(
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .background(
-                                            color = GrisFondo,
-                                            shape = RoundedCornerShape(10.dp)
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.DirectionsCar,
-                                        contentDescription = null,
-                                        tint = AzulTransAndina,
-                                        modifier = Modifier.size(26.dp)
-                                    )
-                                }
-
-                                Spacer(
-                                    modifier = Modifier.size(12.dp)
-                                )
-
-                                Column {
-                                    Text(
-                                        text = "Mi vehículo",
-                                        color = TextoSecundario,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-
-                                    Spacer(
-                                        modifier = Modifier.height(2.dp)
-                                    )
-
-                                    Text(
-                                        text = "${vehiculo.marca} ${vehiculo.modelo}",
-                                        color = TextoPrincipal,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-
-                                    Text(
-                                        text = "Placa: ${vehiculo.placa}",
-                                        color = TextoSecundario,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            }
-
-                            Spacer(
-                                modifier = Modifier.height(18.dp)
-                            )
-
-                            DatoVehiculo(
-                                titulo = "Año",
-                                valor = vehiculo.anio.toString()
-                            )
-
-                            DatoVehiculo(
-                                titulo = "Tipo",
-                                valor = vehiculo.tipo
-                            )
-
-                            vehiculo.capacidad?.let {
-                                DatoVehiculo(
-                                    titulo = "Capacidad",
-                                    valor = it.toString()
-                                )
-                            }
-
-                            DatoVehiculo(
-                                titulo = "Kilometraje actual",
-                                valor = "${vehiculo.kmActual} km"
-                            )
-                        }
-                    }
-
-                    Spacer(
-                        modifier = Modifier.height(24.dp)
+                    Text(
+                        text = "Documentos legales",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
 
-                    // =========================
-                    // DOCUMENTOS
-                    // =========================
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-
-                        Icon(
-                            imageVector = Icons.Default.Description,
-                            contentDescription = null,
-                            tint = AzulTransAndina,
-                            modifier = Modifier.size(22.dp)
-                        )
-
-                        Spacer(
-                            modifier = Modifier.size(8.dp)
-                        )
-
-                        Text(
-                            text = "Documentos legales",
-                            color = TextoPrincipal,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Spacer(
-                        modifier = Modifier.height(10.dp)
-                    )
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Blanco
-                        ),
-                        elevation = CardDefaults.cardElevation(
-                            defaultElevation = 0.dp
-                        )
-                    ) {
-
-                        Column(
-                            modifier = Modifier.padding(
-                                horizontal = 18.dp,
-                                vertical = 4.dp
-                            )
-                        ) {
-
-                            FilaDocumento(
-                                nombre = "Marchamo",
-                                fechaIso = vehiculo.fechaMarchamo
-                            )
-
-                            FilaDocumento(
-                                nombre = "Revisión técnica",
-                                fechaIso = vehiculo.fechaRevisionTecnica
-                            )
-
-                            FilaDocumento(
-                                nombre = "Seguro",
-                                fechaIso = vehiculo.fechaSeguro
-                            )
-                        }
+                    TarjetaTransAndina(relleno = 0.dp) {
+                        FilaDocumento("Marchamo", vehiculo.fechaMarchamo)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        FilaDocumento("Revisión técnica", vehiculo.fechaRevisionTecnica)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        FilaDocumento("Seguro", vehiculo.fechaSeguro)
                     }
                 }
             }
@@ -335,29 +106,35 @@ fun VehiculoScreen(
 }
 
 @Composable
-private fun DatoVehiculo(
-    titulo: String,
-    valor: String
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 5.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-
+private fun TarjetaInformacion(vehiculo: Vehiculo) {
+    TarjetaTransAndina {
         Text(
-            text = titulo,
-            color = TextoSecundario,
-            style = MaterialTheme.typography.bodySmall
+            text = "Mi vehículo",
+            style = MaterialTheme.typography.bodyMedium,
+            color = TransAndinaTheme.colores.textoSecundario
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = vehiculo.placa,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface
         )
 
-        Text(
-            text = valor,
-            color = TextoPrincipal,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.SemiBold
-        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            DatoEtiquetado(etiqueta = "Marca", valor = vehiculo.marca)
+            DatoEtiquetado(etiqueta = "Modelo", valor = vehiculo.modelo)
+            DatoEtiquetado(etiqueta = "Año", valor = vehiculo.anio.toString())
+            DatoEtiquetado(etiqueta = "Tipo", valor = vehiculo.tipo)
+            vehiculo.capacidad?.let {
+                DatoEtiquetado(etiqueta = "Capacidad", valor = it.toString())
+            }
+            DatoEtiquetado(
+                etiqueta = "Kilometraje actual",
+                valor = "${vehiculo.kmActual} km"
+            )
+        }
     }
 }
 
@@ -367,73 +144,76 @@ private fun FilaDocumento(
     fechaIso: String?
 ) {
     val estado = calcularEstadoDocumento(fechaIso)
-
-    val (texto, color) = when (estado) {
-
-        EstadoDocumento.AL_DIA ->
-            "Al día" to Color(0xFF4D8B5A)
-
-        EstadoDocumento.PROXIMO ->
-            "Próximo" to Color(0xFFC28A45)
-
-        EstadoDocumento.VENCIDO ->
-            "Vencido" to Color(0xFFC76969)
-
-        EstadoDocumento.SIN_DATO ->
-            "Sin fecha" to TextoSecundario
+    val (texto, nivel) = when (estado) {
+        EstadoDocumento.AL_DIA -> "Al día" to NivelEstado.OK
+        EstadoDocumento.PROXIMO -> "Próximo" to NivelEstado.AVISO
+        EstadoDocumento.VENCIDO -> "Vencido" to NivelEstado.CRITICO
+        EstadoDocumento.SIN_DATO -> "Sin fecha" to NivelEstado.INFO
     }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = nombre,
-                color = TextoPrincipal,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
-
             fechaIso?.let {
-
-                Spacer(
-                    modifier = Modifier.height(2.dp)
-                )
-
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = it,
-                    color = TextoSecundario,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TransAndinaTheme.colores.textoSecundario
                 )
             }
         }
+        ChipEstado(texto = texto, nivel = nivel)
+    }
+}
 
-        Box(
+@Preview(showBackground = true, heightDp = 900)
+@Composable
+private fun VehiculoScreenPreview() {
+    TransAndinaFlotillaTheme {
+        Column(
             modifier = Modifier
-                .background(
-                    color = color.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(6.dp)
-                )
-                .padding(
-                    horizontal = 9.dp,
-                    vertical = 5.dp
-                )
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
         ) {
-
-            Text(
-                text = texto,
-                color = color,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold
+            TransAndinaTopBar(
+                titulo = "Mi vehículo",
+                subtitulo = "SCD-3421 · Nissan Frontier",
+                onAtras = {}
             )
+            Column(modifier = Modifier.padding(16.dp)) {
+                TarjetaInformacion(
+                    vehiculo = Vehiculo(
+                        id = "1",
+                        placa = "SCD-3421",
+                        marca = "Nissan",
+                        modelo = "Frontier",
+                        anio = 2021,
+                        tipo = "Liviano",
+                        capacidad = 1.1,
+                        kmActual = 492_400.0,
+                        fechaMarchamo = "2026-12-31"
+                    )
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                TarjetaTransAndina(relleno = 0.dp) {
+                    FilaDocumento("Marchamo", "2026-12-31")
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    FilaDocumento("Revisión técnica", "2026-09-15")
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    FilaDocumento("Seguro", null)
+                }
+            }
         }
     }
 }

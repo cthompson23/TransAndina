@@ -1,7 +1,6 @@
 package com.transandina.flotilla.ui.notificaciones
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -9,133 +8,64 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.NotificationsNone
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.transandina.flotilla.ui.components.EstadoVacio
+import com.transandina.flotilla.ui.components.TarjetaTransAndina
+import com.transandina.flotilla.ui.components.TransAndinaTopBar
+import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
+import com.transandina.flotilla.ui.theme.TransAndinaTheme
 
-// Colores TransAndina
-private val AzulTransAndina = Color(0xFF13263F)
-private val GrisFondo = Color(0xFFD9D9D9)
-private val Blanco = Color(0xFFFFFFFF)
-private val TextoSecundario = Color(0xFF8A8A8A)
-
+/** Alertas del conductor (Figma `28:312`). */
 @Composable
 fun NotificacionesScreen() {
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(GrisFondo)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-
-        // =========================
-        // HEADER
-        // =========================
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp)
-                .background(AzulTransAndina),
-            contentAlignment = Alignment.Center
-        ) {
-
-            Text(
-                text = "TransAndina",
-                color = Blanco,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        // =========================
-        // CONTENIDO
-        // =========================
+        TransAndinaTopBar(titulo = "TransAndina")
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(18.dp),
+                .padding(16.dp),
             contentAlignment = Alignment.TopCenter
         ) {
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Blanco
-                ),
-                elevation = CardDefaults.cardElevation(
-                    defaultElevation = 0.dp
-                )
-            ) {
-
+            TarjetaTransAndina {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = 20.dp,
-                            vertical = 28.dp
-                        ),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-
-                    // Ícono
-                    Box(
-                        modifier = Modifier
-                            .size(58.dp)
-                            .background(
-                                color = GrisFondo,
-                                shape = RoundedCornerShape(14.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-
-                        Icon(
-                            imageVector = Icons.Default.NotificationsNone,
-                            contentDescription = "Notificaciones",
-                            tint = AzulTransAndina,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-
-                    Spacer(
-                        modifier = Modifier.height(16.dp)
+                    EstadoVacio(
+                        mensaje = "No hay notificaciones",
+                        icono = Icons.Filled.NotificationsNone
                     )
-
-                    Text(
-                        text = "No hay notificaciones",
-                        color = AzulTransAndina,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(
-                        modifier = Modifier.height(6.dp)
-                    )
-
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "Aquí aparecerán las alertas y notificaciones relacionadas con tu vehículo.",
-                        color = TextoSecundario,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TransAndinaTheme.colores.textoSecundario,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true, heightDp = 600)
+@Composable
+private fun NotificacionesScreenPreview() {
+    TransAndinaFlotillaTheme {
+        NotificacionesScreen()
     }
 }
