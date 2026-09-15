@@ -1,0 +1,10 @@
+# Copia estas líneas al final de TU local.properties (Android Studio ya creó
+# ese archivo con sdk.dir). local.properties está en .gitignore: nunca se sube.
+#
+# Los valores reales pídelos al equipo.
+
+SUPABASE_URL=https://TU-PROYECTO.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_XXXXXXXXXXXXXXXX
+
+# Nunca pongas aquí la clave service_role de Supabase: la app no la necesita
+# y con ella se salta toda la seguridad (RLS) de la base de datos.
