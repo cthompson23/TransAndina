@@ -10,44 +10,32 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.transandina.flotilla.data.model.RolUsuario
+import com.transandina.flotilla.ui.components.BotonPrimario
+import com.transandina.flotilla.ui.components.CampoContrasena
+import com.transandina.flotilla.ui.components.CampoTexto
+import com.transandina.flotilla.ui.theme.EstiloLogotipo
+import com.transandina.flotilla.ui.theme.FormaPildora
+import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
+import com.transandina.flotilla.ui.theme.TransAndinaTheme
 
-// Misma paleta que LoginScreen / HomeScreen / PerfilScreen — pendiente
-// moverla a un Color.kt compartido (ui/theme/Color.kt) para no repetirla.
-private val PageBackground = Color(0xFF13263F)
-private val OrangeAccent = Color(0xFFBB6B2E)
-private val FieldBackground = Color(0xFFFFFFFF)
-private val FieldPlaceholder = Color(0xFF8A8A8A)
-private val TextPrimary = Color(0xFFFFFFFF)
-private val ErrorColor = Color(0xFFC62828)
-
+/** Registro de un usuario nuevo (Figma `1:370`). */
 @Composable
 fun RegistroScreen(
     viewModel: RegistroViewModel = viewModel(),
@@ -60,164 +48,148 @@ fun RegistroScreen(
         if (uiState.registroExitoso) onRegistroExitoso(uiState.rol)
     }
 
+    ContenidoRegistro(
+        uiState = uiState,
+        onNombreCambia = viewModel::onNombreChange,
+        onCedulaCambia = viewModel::onCedulaChange,
+        onEmailCambia = viewModel::onEmailChange,
+        onTelefonoCambia = viewModel::onTelefonoChange,
+        onRolCambia = viewModel::onRolChange,
+        onLicenciaCambia = viewModel::onLicenciaChange,
+        onPasswordCambia = viewModel::onPasswordChange,
+        onConfirmarPasswordCambia = viewModel::onConfirmarPasswordChange,
+        onRegistrar = viewModel::registrar,
+        onIrALogin = onIrALogin
+    )
+}
+
+@Composable
+private fun ContenidoRegistro(
+    uiState: RegistroUiState,
+    onNombreCambia: (String) -> Unit,
+    onCedulaCambia: (String) -> Unit,
+    onEmailCambia: (String) -> Unit,
+    onTelefonoCambia: (String) -> Unit,
+    onRolCambia: (RolUsuario) -> Unit,
+    onLicenciaCambia: (String) -> Unit,
+    onPasswordCambia: (String) -> Unit,
+    onConfirmarPasswordCambia: (String) -> Unit,
+    onRegistrar: () -> Unit,
+    onIrALogin: () -> Unit
+) {
+    val colorEtiqueta = MaterialTheme.colorScheme.background
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PageBackground)
+            .background(MaterialTheme.colorScheme.primary)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 32.dp)
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
                 text = "TransAndina",
-                fontFamily = FontFamily.Serif,
-                fontSize = 26.sp,
-                color = OrangeAccent
+                style = EstiloLogotipo,
+                color = TransAndinaTheme.colores.naranjaLogo
             )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Crear cuenta",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onPrimary
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             CampoTexto(
-                label = "Nombre completo",
-                value = uiState.nombreCompleto,
-                onValueChange = viewModel::onNombreChange
+                etiqueta = "Nombre completo",
+                valor = uiState.nombreCompleto,
+                onValorCambia = onNombreCambia,
+                colorEtiqueta = colorEtiqueta
             )
-            Spacer(modifier = Modifier.height(12.dp))
-
             CampoTexto(
-                label = "Cédula",
-                value = uiState.cedula,
-                onValueChange = viewModel::onCedulaChange,
-                keyboardType = KeyboardType.Number
+                etiqueta = "Cédula",
+                valor = uiState.cedula,
+                onValorCambia = onCedulaCambia,
+                colorEtiqueta = colorEtiqueta,
+                tipoTeclado = KeyboardType.Number
             )
-            Spacer(modifier = Modifier.height(12.dp))
-
             CampoTexto(
-                label = "Correo electrónico",
-                value = uiState.email,
-                onValueChange = viewModel::onEmailChange,
-                keyboardType = KeyboardType.Email
+                etiqueta = "Correo electrónico",
+                valor = uiState.email,
+                onValorCambia = onEmailCambia,
+                colorEtiqueta = colorEtiqueta,
+                tipoTeclado = KeyboardType.Email
             )
-            Spacer(modifier = Modifier.height(12.dp))
-
             CampoTexto(
-                label = "Teléfono",
-                value = uiState.telefono,
-                onValueChange = viewModel::onTelefonoChange,
-                keyboardType = KeyboardType.Phone
+                etiqueta = "Teléfono",
+                valor = uiState.telefono,
+                onValorCambia = onTelefonoCambia,
+                colorEtiqueta = colorEtiqueta,
+                tipoTeclado = KeyboardType.Phone
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            Text(text = "Tipo de cuenta", color = TextPrimary, fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            SelectorRol(rolSeleccionado = uiState.rol, onRolChange = viewModel::onRolChange)
+            Text(
+                text = "Tipo de cuenta",
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorEtiqueta
+            )
+            SelectorRol(rolSeleccionado = uiState.rol, onRolChange = onRolCambia)
 
             if (uiState.rol == RolUsuario.conductor) {
-                Spacer(modifier = Modifier.height(12.dp))
                 CampoTexto(
-                    label = "Número de licencia de conducir",
-                    value = uiState.licenciaConducir,
-                    onValueChange = viewModel::onLicenciaChange
+                    etiqueta = "Número de licencia de conducir",
+                    valor = uiState.licenciaConducir,
+                    onValorCambia = onLicenciaCambia,
+                    colorEtiqueta = colorEtiqueta
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            CampoTexto(
-                label = "Contraseña",
-                value = uiState.password,
-                onValueChange = viewModel::onPasswordChange,
-                visualTransformation = PasswordVisualTransformation()
+            CampoContrasena(
+                etiqueta = "Contraseña",
+                valor = uiState.password,
+                onValorCambia = onPasswordCambia,
+                colorEtiqueta = colorEtiqueta
             )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            CampoTexto(
-                label = "Confirmar contraseña",
-                value = uiState.confirmarPassword,
-                onValueChange = viewModel::onConfirmarPasswordChange,
-                visualTransformation = PasswordVisualTransformation()
+            CampoContrasena(
+                etiqueta = "Confirmar contraseña",
+                valor = uiState.confirmarPassword,
+                onValorCambia = onConfirmarPasswordCambia,
+                colorEtiqueta = colorEtiqueta
             )
 
             uiState.error?.let {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(text = it, color = ErrorColor, fontSize = 13.sp)
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = viewModel::registrar,
-                enabled = !uiState.cargando,
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = OrangeAccent,
-                    contentColor = Color.White
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                if (uiState.cargando) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Color.White
-                    )
-                } else {
-                    Text("Crear cuenta", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
 
             Spacer(modifier = Modifier.height(4.dp))
+
+            BotonPrimario(
+                texto = "Crear cuenta",
+                onClick = onRegistrar,
+                modifier = Modifier.fillMaxWidth(),
+                cargando = uiState.cargando
+            )
+
             TextButton(onClick = onIrALogin, modifier = Modifier.fillMaxWidth()) {
-                Text("¿Ya tienes cuenta? Inicia sesión", color = TextPrimary, fontSize = 13.sp)
+                Text(
+                    text = "¿Ya tienes cuenta? Inicia sesión",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
             }
         }
-    }
-}
-
-@Composable
-private fun CampoTexto(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    keyboardType: KeyboardType = KeyboardType.Text,
-    visualTransformation: androidx.compose.ui.text.input.VisualTransformation =
-        androidx.compose.ui.text.input.VisualTransformation.None
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = label, color = TextPrimary, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(6.dp))
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            visualTransformation = visualTransformation,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            shape = RoundedCornerShape(24.dp),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = FieldBackground,
-                unfocusedContainerColor = FieldBackground,
-                disabledContainerColor = FieldBackground,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-                focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black,
-                cursorColor = OrangeAccent
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
 
@@ -232,7 +204,10 @@ private fun SelectorRol(rolSeleccionado: RolUsuario, onRolChange: (RolUsuario) -
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        listOf(RolUsuario.conductor to "Conductor", RolUsuario.mecanico to "Mecánico").forEach { (rol, etiqueta) ->
+        listOf(
+            RolUsuario.conductor to "Conductor",
+            RolUsuario.mecanico to "Mecánico"
+        ).forEach { (rol, etiqueta) ->
             val seleccionado = rolSeleccionado == rol
             Box(
                 modifier = Modifier
@@ -243,18 +218,49 @@ private fun SelectorRol(rolSeleccionado: RolUsuario, onRolChange: (RolUsuario) -
                         onClick = { onRolChange(rol) }
                     )
                     .background(
-                        color = if (seleccionado) OrangeAccent else FieldBackground,
-                        shape = RoundedCornerShape(22.dp)
+                        color = if (seleccionado) {
+                            MaterialTheme.colorScheme.secondary
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                        shape = FormaPildora
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = etiqueta,
-                    color = if (seleccionado) Color.White else FieldPlaceholder,
-                    fontSize = 14.sp,
-                    fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Normal
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (seleccionado) {
+                        MaterialTheme.colorScheme.onSecondary
+                    } else {
+                        TransAndinaTheme.colores.textoSecundario
+                    }
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true, heightDp = 1000)
+@Composable
+private fun RegistroScreenPreview() {
+    TransAndinaFlotillaTheme {
+        ContenidoRegistro(
+            uiState = RegistroUiState(
+                nombreCompleto = "Carlos Fernández",
+                cedula = "1-1111-1111",
+                rol = RolUsuario.conductor
+            ),
+            onNombreCambia = {},
+            onCedulaCambia = {},
+            onEmailCambia = {},
+            onTelefonoCambia = {},
+            onRolCambia = {},
+            onLicenciaCambia = {},
+            onPasswordCambia = {},
+            onConfirmarPasswordCambia = {},
+            onRegistrar = {},
+            onIrALogin = {}
+        )
     }
 }
