@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -50,14 +51,32 @@ fun CampoFecha(
     marcadorDePosicion: String = "dd/mm/aaaa",
     forma: Shape = MaterialTheme.shapes.small,
     colorEtiqueta: Color = MaterialTheme.colorScheme.onBackground,
-    habilitado: Boolean = true
+    habilitado: Boolean = true,
+    fechaMaxima: LocalDate? = null
 ) {
     var mostrarDialogo by remember { mutableStateOf(false) }
+    // Con `fechaMaxima` el calendario deja en gris todo lo posterior, por
+    // ejemplo para que no se registre un recorrido con fecha futura.
+    val topeMillis = fechaMaxima
+        ?.plusDays(1)
+        ?.atStartOfDay(ZoneOffset.UTC)
+        ?.toInstant()
+        ?.toEpochMilli()
+    val seleccionables = remember(topeMillis) {
+        object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                topeMillis == null || utcTimeMillis < topeMillis
+
+            override fun isSelectableYear(year: Int): Boolean =
+                fechaMaxima == null || year <= fechaMaxima.year
+        }
+    }
     val estadoPicker = rememberDatePickerState(
         initialSelectedDateMillis = fecha
             ?.atStartOfDay(ZoneOffset.UTC)
             ?.toInstant()
-            ?.toEpochMilli()
+            ?.toEpochMilli(),
+        selectableDates = seleccionables
     )
 
     Column(
