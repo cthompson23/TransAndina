@@ -1,8 +1,30 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     kotlin("plugin.serialization") version "2.0.0"
 }
+
+// Configuración de Supabase leída desde local.properties (no se sube al repositorio).
+// Se lee con providers.fileContents para que Gradle registre el archivo como
+// entrada del configuration cache y lo invalide cuando cambie.
+val propiedadesLocales = Properties().apply {
+    providers.fileContents(rootProject.layout.projectDirectory.file("local.properties"))
+        .asText.orNull
+        ?.let { load(it.reader()) }
+}
+
+fun propiedadLocal(nombre: String): String =
+    propiedadesLocales.getProperty(nombre)?.trim()?.takeIf { it.isNotEmpty() }
+        ?: throw GradleException(
+            "Falta la propiedad '$nombre' en local.properties (raíz del proyecto). " +
+                "Copia las líneas de local.properties.example a tu local.properties " +
+                "y pide los valores reales al equipo."
+        )
+
+val supabaseUrl = propiedadLocal("SUPABASE_URL")
+val supabasePublishableKey = propiedadLocal("SUPABASE_PUBLISHABLE_KEY")
 
 android {
     namespace = "com.transandina.flotilla"
@@ -18,6 +40,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$supabasePublishableKey\"")
     }
 
     buildTypes {
@@ -33,6 +58,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

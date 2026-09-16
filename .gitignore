@@ -1,15 +1,36 @@
+# ---- Android / Gradle ----
 *.iml
-.gradle
-/local.properties
+.gradle/
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+.kotlin/
+
+# ---- Configuración local y secretos (NUNCA subir) ----
+local.properties
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+google-services.json
+
+# ---- Android Studio ----
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/deviceManager.xml
+
+# ---- Claude Code (configuración personal) ----
+CLAUDE.md
+CLAUDE.local.md
+.claude/settings.local.json
+
+# ---- macOS ----
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties

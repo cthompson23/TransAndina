@@ -1,5 +1,6 @@
 package com.transandina.flotilla.di
 
+import com.transandina.flotilla.BuildConfig
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.postgrest.Postgrest
@@ -10,8 +11,8 @@ import io.github.jan.supabase.postgrest.Postgrest
  */
 object SupabaseProvider {
     val client = createSupabaseClient(
-        supabaseUrl = "https://jeqaibzvjfamqnssycln.supabase.co",
-        supabaseKey = "sb_publishable_rvqQIYtaXlOh8XeuLu7D1Q_HBSdV4Mm"
+        supabaseUrl = BuildConfig.SUPABASE_URL,
+        supabaseKey = BuildConfig.SUPABASE_PUBLISHABLE_KEY
     ) {
         install(Auth){
             scheme = "transandina"
