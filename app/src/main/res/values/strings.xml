@@ -1,3 +1,90 @@
 <resources>
     <string name="app_name">TransAndina Flotilla</string>
+    <string name="marca">TransAndina</string>
+
+    <!-- Comunes -->
+    <string name="volver">Volver</string>
+    <string name="cancelar">Cancelar</string>
+    <string name="guardar">Guardar</string>
+    <string name="correo_electronico">Correo electrónico</string>
+    <string name="correo_marcador">ejemplo@correo.com</string>
+    <string name="contrasena">Contraseña</string>
+    <string name="nombre_completo">Nombre completo</string>
+    <string name="telefono">Número de teléfono</string>
+    <string name="cedula">Número de cédula</string>
+
+    <!-- Iniciar sesión (Figma 1:404) -->
+    <string name="login_titulo">Iniciar sesión</string>
+    <string name="login_contrasena_marcador">Escribir la contraseña</string>
+    <string name="login_recuperar">Recuperar contraseña</string>
+    <string name="login_ingresar">Ingresar</string>
+    <string name="login_sin_cuenta">¿No tienes una cuenta?</string>
+    <string name="login_registrate">Regístrate aquí</string>
+
+    <!-- Recuperar contraseña (Figma 1:387) -->
+    <string name="recuperar_encabezado">Recuperar la contraseña</string>
+    <string name="recuperar_titulo">Verificar correo</string>
+    <string name="recuperar_ayuda">Ingresa tu correo y te mandamos un enlace para restablecer tu contraseña.</string>
+    <string name="recuperar_enviar">Enviar</string>
+    <string name="recuperar_enviado">Te enviamos un correo con un enlace para restablecer tu contraseña. Ábrelo desde este mismo dispositivo.</string>
+    <string name="recuperar_volver">Volver a iniciar sesión</string>
+
+    <!-- Nueva contraseña (Figma 1:352) -->
+    <string name="nueva_contrasena_encabezado">Resetear la contraseña</string>
+    <string name="nueva_contrasena_nueva">Nueva contraseña</string>
+    <string name="nueva_contrasena_confirmar">Confirma la nueva contraseña</string>
+    <string name="nueva_contrasena_guardar">Guardar nueva contraseña</string>
+
+    <!-- Registro (Figma 1:370) -->
+    <string name="registro_encabezado">Registrarse</string>
+    <string name="registro_rol">Tipo de cuenta</string>
+    <string name="registro_rol_marcador">Escoge tu rol</string>
+    <string name="registro_rol_conductor">Conductor</string>
+    <string name="registro_rol_mecanico">Mecánico</string>
+    <string name="registro_nombre_marcador">Escribe tu nombre completo</string>
+    <string name="registro_cedula_marcador">Escríbela sin guiones ni espacios</string>
+    <string name="registro_telefono_marcador">Escribe tu teléfono</string>
+    <string name="registro_licencia">Número de licencia de conducir</string>
+    <string name="registro_licencia_marcador">Escribe tu número de licencia</string>
+    <string name="registro_contrasena_marcador">Escribe tu contraseña</string>
+    <string name="registro_confirmar_contrasena">Confirmar contraseña</string>
+    <string name="registro_crear_cuenta">Crear cuenta</string>
+    <string name="registro_ya_tienes_cuenta">¿Ya tienes cuenta? Inicia sesión</string>
+
+    <!-- Inicio (Figma 1:1225) -->
+    <string name="inicio_mi_vehiculo">Mi vehículo</string>
+    <string name="inicio_sin_vehiculo">No tienes un vehículo asignado todavía</string>
+    <string name="inicio_ver_documentos">Ve a la pestaña Vehículo para ver el detalle de tus documentos.</string>
+    <string name="inicio_mecanico_titulo">Vehículos de la flotilla</string>
+    <string name="inicio_mecanico_mensaje">Próximamente: listado de vehículos para registrar un mantenimiento sobre cualquiera de ellos.</string>
+    <string name="inicio_encargado_titulo">Panel de flotilla</string>
+    <string name="inicio_encargado_mensaje">Próximamente: estado general de todos los vehículos con indicadores de semáforo.</string>
+
+    <!-- Estados de documentos, usados en los chips -->
+    <string name="estado_al_dia">Al día</string>
+    <string name="estado_proximo">Próximo</string>
+    <string name="estado_atrasado">Atrasado</string>
+
+    <!-- Perfil (Figma 28:163 y 28:263) -->
+    <string name="perfil_titulo">Perfil</string>
+    <string name="perfil_editar_titulo">Editar datos</string>
+    <string name="perfil_rol">Rol</string>
+    <string name="perfil_licencia">Licencia de conducir</string>
+    <string name="perfil_sin_registrar">Sin registrar</string>
+    <string name="perfil_editar_datos">Editar datos</string>
+    <string name="perfil_cerrar_sesion">Cerrar sesión</string>
+    <string name="perfil_cerrar_sesion_pregunta">¿Seguro que quieres cerrar sesión?</string>
+    <string name="perfil_actualizado">Perfil actualizado correctamente</string>
+    <string name="perfil_error_carga">No se pudo cargar tu perfil</string>
+    <string name="perfil_correo_no_editable">Correo electrónico (no editable)</string>
+    <string name="perfil_rol_no_editable">Rol (no editable)</string>
+
+    <!-- Mis alertas (Figma 28:312) -->
+    <string name="alertas_titulo">Mis alertas</string>
+    <string name="alertas_vacio">No hay alertas por ahora</string>
+    <string name="alertas_vacio_detalle">Aquí aparecerán las alertas y notificaciones relacionadas con tu vehículo.</string>
+
+    <!-- Accesibilidad -->
+    <string name="mostrar_contrasena">Mostrar contraseña</string>
+    <string name="ocultar_contrasena">Ocultar contraseña</string>
 </resources>

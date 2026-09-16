@@ -1,7 +1,6 @@
 package com.transandina.flotilla.ui.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -17,18 +16,21 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.transandina.flotilla.R
 import com.transandina.flotilla.ui.components.BotonPrimario
 import com.transandina.flotilla.ui.components.CampoTexto
-import com.transandina.flotilla.ui.theme.EstiloLogotipo
+import com.transandina.flotilla.ui.components.TransAndinaTopBar
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
-import com.transandina.flotilla.ui.theme.TransAndinaTheme
 
-/** Envío del correo de recuperación (Figma `1:387`). */
+/**
+ * Envío del correo de recuperación (Figma `1:387`): encabezado navy con
+ * flecha atrás, título "Verificar correo" y un solo campo.
+ */
 @Composable
 fun RecuperarContrasenaScreen(
     viewModel: RecuperarContrasenaViewModel = viewModel(),
@@ -53,63 +55,63 @@ private fun ContenidoRecuperarContrasena(
 ) {
     val colorEtiqueta = MaterialTheme.colorScheme.background
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.primary)
     ) {
+        TransAndinaTopBar(
+            titulo = stringResource(R.string.recuperar_encabezado),
+            onAtras = onVolverALogin
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 24.dp, vertical = 32.dp)
         ) {
             Text(
-                text = "TransAndina",
-                style = EstiloLogotipo,
-                color = TransAndinaTheme.colores.naranjaLogo
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Recuperar contraseña",
-                style = MaterialTheme.typography.titleLarge,
+                text = stringResource(R.string.recuperar_titulo),
+                style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onPrimary
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (uiState.correoEnviado) {
                 Text(
-                    text = "Te enviamos un correo con un enlace para restablecer tu contraseña. " +
-                        "Ábrelo desde este mismo dispositivo.",
+                    text = stringResource(R.string.recuperar_enviado),
                     style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.background
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-                TextButton(onClick = onVolverALogin) {
-                    Text(
-                        text = "Volver a iniciar sesión",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
+                Spacer(modifier = Modifier.height(16.dp))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    TextButton(onClick = onVolverALogin) {
+                        Text(
+                            text = stringResource(R.string.recuperar_volver),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
                 }
             } else {
                 Text(
-                    text = "Ingresa tu correo y te mandamos un enlace para restablecer tu contraseña.",
+                    text = stringResource(R.string.recuperar_ayuda),
                     style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.background
                 )
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 CampoTexto(
-                    etiqueta = "Correo electrónico",
+                    etiqueta = stringResource(R.string.correo_electronico),
                     valor = uiState.email,
                     onValorCambia = onEmailCambia,
+                    marcadorDePosicion = stringResource(R.string.correo_marcador),
                     colorEtiqueta = colorEtiqueta,
-                    tipoTeclado = KeyboardType.Email
+                    tipoTeclado = KeyboardType.Email,
+                    habilitado = !uiState.cargando,
+                    esError = uiState.error != null
                 )
 
                 uiState.error?.let {
@@ -124,31 +126,82 @@ private fun ContenidoRecuperarContrasena(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 BotonPrimario(
-                    texto = "Enviar enlace",
+                    texto = stringResource(R.string.recuperar_enviar),
                     onClick = onEnviarCorreo,
                     modifier = Modifier.fillMaxWidth(),
                     cargando = uiState.cargando
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = onVolverALogin) {
-                    Text(
-                        text = "Volver a iniciar sesión",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    TextButton(onClick = onVolverALogin) {
+                        Text(
+                            text = stringResource(R.string.recuperar_volver),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-@Preview(showBackground = true, heightDp = 800)
+@Preview(name = "Recuperar", showBackground = true, heightDp = 800)
 @Composable
-private fun RecuperarContrasenaScreenPreview() {
+private fun RecuperarContrasenaPreview() {
     TransAndinaFlotillaTheme {
         ContenidoRecuperarContrasena(
             uiState = RecuperarContrasenaUiState(email = "carlos@transandina.cr"),
+            onEmailCambia = {},
+            onEnviarCorreo = {},
+            onVolverALogin = {}
+        )
+    }
+}
+
+@Preview(name = "Recuperar cargando", showBackground = true, heightDp = 800)
+@Composable
+private fun RecuperarCargandoPreview() {
+    TransAndinaFlotillaTheme {
+        ContenidoRecuperarContrasena(
+            uiState = RecuperarContrasenaUiState(
+                email = "carlos@transandina.cr",
+                cargando = true
+            ),
+            onEmailCambia = {},
+            onEnviarCorreo = {},
+            onVolverALogin = {}
+        )
+    }
+}
+
+@Preview(name = "Recuperar con error", showBackground = true, heightDp = 800)
+@Composable
+private fun RecuperarErrorPreview() {
+    TransAndinaFlotillaTheme {
+        ContenidoRecuperarContrasena(
+            uiState = RecuperarContrasenaUiState(
+                email = "correo-invalido",
+                error = "Escribe un correo válido"
+            ),
+            onEmailCambia = {},
+            onEnviarCorreo = {},
+            onVolverALogin = {}
+        )
+    }
+}
+
+@Preview(name = "Recuperar enviado", showBackground = true, heightDp = 800)
+@Composable
+private fun RecuperarEnviadoPreview() {
+    TransAndinaFlotillaTheme {
+        ContenidoRecuperarContrasena(
+            uiState = RecuperarContrasenaUiState(
+                email = "carlos@transandina.cr",
+                correoEnviado = true
+            ),
             onEmailCambia = {},
             onEnviarCorreo = {},
             onVolverALogin = {}

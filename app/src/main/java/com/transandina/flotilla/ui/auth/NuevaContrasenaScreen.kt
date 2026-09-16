@@ -1,8 +1,6 @@
 package com.transandina.flotilla.ui.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,20 +13,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.transandina.flotilla.R
 import com.transandina.flotilla.ui.components.BotonPrimario
 import com.transandina.flotilla.ui.components.CampoContrasena
-import com.transandina.flotilla.ui.theme.EstiloLogotipo
+import com.transandina.flotilla.ui.components.TransAndinaTopBar
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
-import com.transandina.flotilla.ui.theme.TransAndinaTheme
 
 /**
- * Pantalla a la que se llega desde el correo de recuperación (Figma `1:352`).
- * A diferencia del resto de auth, su fondo es claro.
+ * Pantalla a la que se llega desde el correo de recuperación (Figma `1:352`):
+ * fondo navy, encabezado "Resetear la contraseña" y los dos campos con ojo.
  */
 @Composable
 fun NuevaContrasenaScreen(
@@ -56,43 +54,40 @@ private fun ContenidoNuevaContrasena(
     onConfirmarPasswordCambia: (String) -> Unit,
     onGuardar: () -> Unit
 ) {
-    Box(
+    val colorEtiqueta = MaterialTheme.colorScheme.background
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.primary)
     ) {
+        // No lleva flecha atrás: se llega por el enlace del correo, no
+        // navegando desde otra pantalla.
+        TransAndinaTopBar(titulo = stringResource(R.string.nueva_contrasena_encabezado))
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 24.dp, vertical = 32.dp)
         ) {
-            Text(
-                text = "TransAndina",
-                style = EstiloLogotipo,
-                color = TransAndinaTheme.colores.naranjaLogo
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Nueva contraseña",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
             CampoContrasena(
-                etiqueta = "Nueva contraseña",
+                etiqueta = stringResource(R.string.nueva_contrasena_nueva),
                 valor = uiState.password,
-                onValorCambia = onPasswordCambia
+                onValorCambia = onPasswordCambia,
+                colorEtiqueta = colorEtiqueta,
+                habilitado = !uiState.cargando,
+                esError = uiState.error != null
             )
-            Spacer(modifier = Modifier.height(12.dp))
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             CampoContrasena(
-                etiqueta = "Confirmar contraseña",
+                etiqueta = stringResource(R.string.nueva_contrasena_confirmar),
                 valor = uiState.confirmarPassword,
-                onValorCambia = onConfirmarPasswordCambia
+                onValorCambia = onConfirmarPasswordCambia,
+                colorEtiqueta = colorEtiqueta,
+                habilitado = !uiState.cargando,
+                esError = uiState.error != null
             )
 
             uiState.error?.let {
@@ -107,7 +102,7 @@ private fun ContenidoNuevaContrasena(
             Spacer(modifier = Modifier.height(24.dp))
 
             BotonPrimario(
-                texto = "Guardar nueva contraseña",
+                texto = stringResource(R.string.nueva_contrasena_guardar),
                 onClick = onGuardar,
                 modifier = Modifier.fillMaxWidth(),
                 cargando = uiState.cargando
@@ -116,12 +111,45 @@ private fun ContenidoNuevaContrasena(
     }
 }
 
-@Preview(showBackground = true, heightDp = 800)
+@Preview(name = "Nueva contraseña", showBackground = true, heightDp = 800)
 @Composable
-private fun NuevaContrasenaScreenPreview() {
+private fun NuevaContrasenaPreview() {
     TransAndinaFlotillaTheme {
         ContenidoNuevaContrasena(
-            uiState = NuevaContrasenaUiState(password = "secreta"),
+            uiState = NuevaContrasenaUiState(
+                password = "secreta",
+                confirmarPassword = "secreta"
+            ),
+            onPasswordCambia = {},
+            onConfirmarPasswordCambia = {},
+            onGuardar = {}
+        )
+    }
+}
+
+@Preview(name = "Nueva contraseña cargando", showBackground = true, heightDp = 800)
+@Composable
+private fun NuevaContrasenaCargandoPreview() {
+    TransAndinaFlotillaTheme {
+        ContenidoNuevaContrasena(
+            uiState = NuevaContrasenaUiState(password = "secreta", cargando = true),
+            onPasswordCambia = {},
+            onConfirmarPasswordCambia = {},
+            onGuardar = {}
+        )
+    }
+}
+
+@Preview(name = "Nueva contraseña con error", showBackground = true, heightDp = 800)
+@Composable
+private fun NuevaContrasenaErrorPreview() {
+    TransAndinaFlotillaTheme {
+        ContenidoNuevaContrasena(
+            uiState = NuevaContrasenaUiState(
+                password = "secreta",
+                confirmarPassword = "otra",
+                error = "Las contraseñas no coinciden"
+            ),
             onPasswordCambia = {},
             onConfirmarPasswordCambia = {},
             onGuardar = {}

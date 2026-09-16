@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -23,11 +25,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.transandina.flotilla.R
 import com.transandina.flotilla.data.model.RolUsuario
 import com.transandina.flotilla.ui.components.BotonPrimario
 import com.transandina.flotilla.ui.components.CampoContrasena
@@ -82,22 +86,23 @@ private fun ContenidoLogin(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(64.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
             Text(
-                text = "TransAndina",
+                text = stringResource(R.string.marca),
                 style = EstiloLogotipo,
                 color = TransAndinaTheme.colores.naranjaLogo,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = "Iniciar sesión",
+                text = stringResource(R.string.login_titulo),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onPrimary,
                 textAlign = TextAlign.Center
@@ -106,30 +111,32 @@ private fun ContenidoLogin(
             Spacer(modifier = Modifier.height(32.dp))
 
             CampoTexto(
-                etiqueta = "Correo electrónico",
+                etiqueta = stringResource(R.string.correo_electronico),
                 valor = uiState.email,
                 onValorCambia = onEmailCambia,
-                marcadorDePosicion = "ejemplo@correo.com",
+                marcadorDePosicion = stringResource(R.string.correo_marcador),
                 colorEtiqueta = colorEtiqueta,
-                tipoTeclado = KeyboardType.Email
+                tipoTeclado = KeyboardType.Email,
+                habilitado = !uiState.cargando,
+                esError = uiState.error != null
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             CampoContrasena(
-                etiqueta = "Contraseña",
+                etiqueta = stringResource(R.string.contrasena),
                 valor = uiState.password,
                 onValorCambia = onPasswordCambia,
-                marcadorDePosicion = "Escribir la contraseña",
-                colorEtiqueta = colorEtiqueta
+                marcadorDePosicion = stringResource(R.string.login_contrasena_marcador),
+                colorEtiqueta = colorEtiqueta,
+                habilitado = !uiState.cargando,
+                esError = uiState.error != null
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = onRecuperarContrasena) {
                     Text(
-                        text = "Recuperar contraseña",
+                        text = stringResource(R.string.login_recuperar),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.background
                     )
@@ -137,33 +144,34 @@ private fun ContenidoLogin(
             }
 
             uiState.error?.let {
-                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             BotonPrimario(
-                texto = "Ingresar",
+                texto = stringResource(R.string.login_ingresar),
                 onClick = onIniciarSesion,
                 modifier = Modifier.fillMaxWidth(),
                 cargando = uiState.cargando
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(48.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "¿No tienes una cuenta?",
+                    text = stringResource(R.string.login_sin_cuenta),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.background
                 )
@@ -180,23 +188,54 @@ private fun ContenidoLogin(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Text(
-                        text = "Regístrate aquí",
+                        text = stringResource(R.string.login_registrate),
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
-@Preview(showBackground = true, heightDp = 800)
+@Preview(name = "Login", showBackground = true, heightDp = 800)
 @Composable
 private fun LoginScreenPreview() {
     TransAndinaFlotillaTheme {
         ContenidoLogin(
-            uiState = LoginUiState(email = "carlos@transandina.cr"),
+            uiState = LoginUiState(email = "carlos@transandina.cr", password = "secreta"),
+            onEmailCambia = {},
+            onPasswordCambia = {},
+            onIniciarSesion = {},
+            onRecuperarContrasena = {},
+            onRegistrarse = {}
+        )
+    }
+}
+
+@Preview(name = "Login cargando", showBackground = true, heightDp = 800)
+@Composable
+private fun LoginCargandoPreview() {
+    TransAndinaFlotillaTheme {
+        ContenidoLogin(
+            uiState = LoginUiState(email = "carlos@transandina.cr", cargando = true),
+            onEmailCambia = {},
+            onPasswordCambia = {},
+            onIniciarSesion = {},
+            onRecuperarContrasena = {},
+            onRegistrarse = {}
+        )
+    }
+}
+
+@Preview(name = "Login con error", showBackground = true, heightDp = 800)
+@Composable
+private fun LoginErrorPreview() {
+    TransAndinaFlotillaTheme {
+        ContenidoLogin(
+            uiState = LoginUiState(
+                email = "carlos@transandina.cr",
+                error = "Correo o contraseña incorrectos"
+            ),
             onEmailCambia = {},
             onPasswordCambia = {},
             onIniciarSesion = {},
