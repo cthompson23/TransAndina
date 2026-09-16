@@ -99,7 +99,6 @@
     <string name="detalle_pestana_kilometraje">Kilometraje</string>
     <string name="detalle_pestana_documentos">Documentos</string>
     <string name="detalle_titulo_historial">Historial de mantenimientos</string>
-    <string name="detalle_error_carga">No se pudo cargar la información del vehículo</string>
     <string name="detalle_no_encontrado">No encontramos ese vehículo</string>
 
     <string name="vehiculo_placa">Placa</string>
