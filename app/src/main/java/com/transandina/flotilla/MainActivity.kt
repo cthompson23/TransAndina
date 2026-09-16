@@ -13,6 +13,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,13 +43,29 @@ import com.transandina.flotilla.ui.navigation.itemsParaRol
 import com.transandina.flotilla.ui.notificaciones.NotificacionesScreen
 import com.transandina.flotilla.ui.perfil.PerfilScreen
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
-import com.transandina.flotilla.ui.vehiculo.VehiculoScreen
+import com.transandina.flotilla.ui.kilometraje.KilometrajeScreen
+import com.transandina.flotilla.ui.vehiculo.PestanaVehiculo
+import com.transandina.flotilla.ui.vehiculo.VehiculoDetalleScreen
+import com.transandina.flotilla.ui.vehiculo.VehiculoHubScreen
 import io.github.jan.supabase.auth.handleDeeplinks
 
 private const val RUTA_LOGIN = "login"
 private const val RUTA_REGISTRO = "registro"
 private const val RUTA_RECUPERAR_CONTRASENA = "recuperar-contrasena"
 private const val RUTA_NUEVA_CONTRASENA = "nueva-contrasena"
+private const val ARG_VEHICULO_ID = "vehiculoId"
+private const val ARG_PESTANA = "pestana"
+private const val RUTA_VEHICULO_DETALLE = "vehiculo-detalle/{$ARG_VEHICULO_ID}/{$ARG_PESTANA}"
+private const val RUTA_REGISTRAR_KILOMETRAJE = "registrar-kilometraje/{$ARG_VEHICULO_ID}"
+
+/** Avisa al detalle del vehículo que vuelva a leer los datos tras guardar. */
+private const val CLAVE_KM_REGISTRADO = "km_registrado"
+
+private fun rutaVehiculoDetalle(vehiculoId: String, pestana: PestanaVehiculo) =
+    "vehiculo-detalle/$vehiculoId/${pestana.name}"
+
+private fun rutaRegistrarKilometraje(vehiculoId: String) =
+    "registrar-kilometraje/$vehiculoId"
 
 private val RUTAS_SIN_BARRA_INFERIOR = setOf(
     RUTA_LOGIN, RUTA_REGISTRO, RUTA_RECUPERAR_CONTRASENA, RUTA_NUEVA_CONTRASENA
@@ -206,7 +223,51 @@ private fun AppNavigation(
             composable(BottomNavItem.Inicio.ruta) {
                 rolActual?.let { HomeScreen(rol = it) }
             }
-            composable(BottomNavItem.Vehiculo.ruta) { VehiculoScreen() }
+            composable(BottomNavItem.Vehiculo.ruta) {
+                VehiculoHubScreen(
+                    onAbrirDetalle = { vehiculoId, pestana ->
+                        navController.navigate(rutaVehiculoDetalle(vehiculoId, pestana))
+                    },
+                    onRegistrarKilometraje = { vehiculoId ->
+                        navController.navigate(rutaRegistrarKilometraje(vehiculoId))
+                    }
+                )
+            }
+            composable(RUTA_VEHICULO_DETALLE) { entrada ->
+                val vehiculoId = entrada.arguments?.getString(ARG_VEHICULO_ID).orEmpty()
+                val pestana = entrada.arguments?.getString(ARG_PESTANA)
+                    ?.let { runCatching { PestanaVehiculo.valueOf(it) }.getOrNull() }
+                    ?: PestanaVehiculo.INFORMACION
+                // Cada vez que se guarda un kilometraje, este contador cambia y
+                // el detalle vuelve a leer el vehículo con el km ya actualizado.
+                val tokenRecarga by entrada.savedStateHandle
+                    .getStateFlow(CLAVE_KM_REGISTRADO, 0)
+                    .collectAsState()
+
+                VehiculoDetalleScreen(
+                    vehiculoId = vehiculoId,
+                    pestanaInicial = pestana,
+                    tokenRecarga = tokenRecarga,
+                    onAtras = { navController.popBackStack() },
+                    onRegistrarKilometraje = { id ->
+                        navController.navigate(rutaRegistrarKilometraje(id))
+                    }
+                )
+            }
+            composable(RUTA_REGISTRAR_KILOMETRAJE) { entrada ->
+                KilometrajeScreen(
+                    vehiculoId = entrada.arguments?.getString(ARG_VEHICULO_ID),
+                    onAtras = { navController.popBackStack() },
+                    onRegistroExitoso = {
+                        val anterior = navController.previousBackStackEntry?.savedStateHandle
+                        anterior?.set(
+                            CLAVE_KM_REGISTRADO,
+                            (anterior.get<Int>(CLAVE_KM_REGISTRADO) ?: 0) + 1
+                        )
+                        navController.popBackStack()
+                    }
+                )
+            }
             composable(BottomNavItem.Mantenimiento.ruta) { MantenimientoScreen() }
             composable(BottomNavItem.Notificaciones.ruta) { NotificacionesScreen() }
             composable(BottomNavItem.Perfil.ruta) {

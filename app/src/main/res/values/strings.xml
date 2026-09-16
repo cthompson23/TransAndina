@@ -79,6 +79,66 @@
     <string name="perfil_correo_no_editable">Correo electrónico (no editable)</string>
     <string name="perfil_rol_no_editable">Rol (no editable)</string>
 
+    <!-- Hub del vehículo (Figma 70:133) -->
+    <string name="vehiculo_titulo">Mi vehículo</string>
+    <string name="vehiculo_sin_asignar">No tienes un vehículo asignado</string>
+    <string name="vehiculo_opcion_informacion">Información del vehículo</string>
+    <string name="vehiculo_opcion_informacion_detalle">Placa, tipo, marca, modelo y capacidad</string>
+    <string name="vehiculo_opcion_historial">Historial de mantenimientos</string>
+    <string name="vehiculo_opcion_historial_detalle">Consultar y filtrar por tipo o fecha</string>
+    <string name="vehiculo_opcion_registrar_km">Registrar kilometraje</string>
+    <string name="vehiculo_opcion_registrar_km_detalle">Actualizar el recorrido de la unidad</string>
+    <string name="vehiculo_opcion_kilometraje">Kilometraje</string>
+    <string name="vehiculo_opcion_kilometraje_detalle">Histórico y próximo mantenimiento</string>
+    <string name="vehiculo_opcion_documentos">Documentos</string>
+    <string name="vehiculo_opcion_documentos_detalle">Marchamo, revisión técnica y seguro</string>
+
+    <!-- Detalle del vehículo (Figma 28:418, 51:125, 51:217, 87:135) -->
+    <string name="detalle_pestana_informacion">Información</string>
+    <string name="detalle_pestana_historial">Historial</string>
+    <string name="detalle_pestana_kilometraje">Kilometraje</string>
+    <string name="detalle_pestana_documentos">Documentos</string>
+    <string name="detalle_titulo_historial">Historial de mantenimientos</string>
+    <string name="detalle_no_encontrado">No encontramos ese vehículo</string>
+
+    <string name="vehiculo_placa">Placa</string>
+    <string name="vehiculo_tipo">Tipo</string>
+    <string name="vehiculo_anio">Año</string>
+    <string name="vehiculo_marca">Marca</string>
+    <string name="vehiculo_modelo">Modelo</string>
+    <string name="vehiculo_capacidad">Capacidad</string>
+    <string name="vehiculo_capacidad_toneladas">%s toneladas</string>
+    <string name="vehiculo_sin_capacidad">Sin registrar</string>
+
+    <string name="historial_vacio">Todavía no hay mantenimientos registrados</string>
+
+    <string name="kilometraje_actual">Kilometraje actual</string>
+    <string name="kilometraje_acumulado">Kilometraje acumulado por mes</string>
+    <string name="kilometraje_sin_historial">Todavía no hay lecturas de kilometraje registradas</string>
+
+    <string name="documentos_marchamo">Marchamo</string>
+    <string name="documentos_revision">Revisión técnica</string>
+    <string name="documentos_seguro">Póliza INS</string>
+    <string name="documentos_vence">Vence el %s</string>
+    <string name="documentos_vencio">Venció el %s</string>
+    <string name="documentos_sin_fecha">Sin fecha registrada</string>
+    <string name="documentos_vacio">Este vehículo no tiene fechas de documentos registradas</string>
+    <string name="documentos_pie">Los documentos los carga el encargado de flota.</string>
+    <string name="estado_vigente">Vigente</string>
+    <string name="estado_por_vencer">Por vencer</string>
+    <string name="estado_vencido">Vencido</string>
+    <string name="estado_sin_fecha">Sin fecha</string>
+
+    <!-- Registrar kilometraje (Figma 51:174) -->
+    <string name="registro_km_titulo">Registrar kilometraje</string>
+    <string name="registro_km_vehiculo">Vehículo</string>
+    <string name="registro_km_nuevo">Kilometraje actual</string>
+    <string name="registro_km_nuevo_marcador">Ingrese el kilometraje</string>
+    <string name="registro_km_fecha">Fecha del registro</string>
+    <string name="registro_km_ultimo">Último kilometraje registrado: %1$s · %2$s</string>
+    <string name="registro_km_ultimo_sin_fecha">Último kilometraje registrado: %1$s</string>
+    <string name="registro_km_exito">Kilometraje actualizado correctamente</string>
+
     <!-- Mis alertas (Figma 28:312) -->
     <string name="alertas_titulo">Mis alertas</string>
     <string name="alertas_vacio">No hay alertas por ahora</string>

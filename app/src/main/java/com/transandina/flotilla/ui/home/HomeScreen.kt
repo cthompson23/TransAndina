@@ -29,6 +29,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.transandina.flotilla.R
 import com.transandina.flotilla.data.model.RolUsuario
 import com.transandina.flotilla.data.model.Vehiculo
+import com.transandina.flotilla.domain.EstadoDocumento
+import com.transandina.flotilla.domain.calcularEstadoDocumento
+import com.transandina.flotilla.domain.formatearKilometrosConUnidad
 import com.transandina.flotilla.ui.components.ChipEstado
 import com.transandina.flotilla.ui.components.EstadoVacio
 import com.transandina.flotilla.ui.components.NivelEstado
@@ -36,8 +39,6 @@ import com.transandina.flotilla.ui.components.TarjetaTransAndina
 import com.transandina.flotilla.ui.components.TransAndinaTopBar
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
 import com.transandina.flotilla.ui.theme.TransAndinaTheme
-import com.transandina.flotilla.ui.vehiculo.EstadoDocumento
-import com.transandina.flotilla.ui.vehiculo.calcularEstadoDocumento
 
 /**
  * Punto de entrada único de la pestaña "Inicio". El contenido real
@@ -134,7 +135,7 @@ private fun TarjetaVehiculoAsignado(vehiculo: Vehiculo) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${vehiculo.marca} ${vehiculo.modelo} · ${vehiculo.kmActual} km",
+                    text = "${vehiculo.marca} ${vehiculo.modelo} · ${formatearKilometrosConUnidad(vehiculo.kmActual)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = TransAndinaTheme.colores.textoTerciario
                 )
