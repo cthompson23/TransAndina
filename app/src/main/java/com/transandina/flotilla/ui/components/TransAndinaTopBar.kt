@@ -18,9 +18,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.transandina.flotilla.R
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
 
 /**
@@ -43,7 +45,7 @@ fun TransAndinaTopBar(
         if (onAtras != null) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Volver",
+                contentDescription = stringResource(R.string.volver),
                 tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
