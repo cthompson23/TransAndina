@@ -9,38 +9,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.transandina.flotilla.ui.components.BotonPrimario
+import com.transandina.flotilla.ui.components.CampoTexto
+import com.transandina.flotilla.ui.theme.EstiloLogotipo
+import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
+import com.transandina.flotilla.ui.theme.TransAndinaTheme
 
-// Misma paleta que LoginScreen / RegistroScreen / NuevaContrasenaScreen /
-// PerfilScreen / HomeScreen — pendiente moverla a un Color.kt compartido
-// (ui/theme/Color.kt).
-private val PageBackground = Color(0xFF13263F)
-private val OrangeAccent = Color(0xFFBB6B2E)
-private val FieldBackground = Color(0xFFFFFFFF)
-private val TextPrimary = Color(0xFFFFFFFF)
-private val TextMuted = Color(0xFF6B7280)
-private val ErrorColor = Color(0xFFC62828)
-
+/** Envío del correo de recuperación (Figma `1:387`). */
 @Composable
 fun RecuperarContrasenaScreen(
     viewModel: RecuperarContrasenaViewModel = viewModel(),
@@ -48,10 +36,27 @@ fun RecuperarContrasenaScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    ContenidoRecuperarContrasena(
+        uiState = uiState,
+        onEmailCambia = viewModel::onEmailChange,
+        onEnviarCorreo = viewModel::enviarCorreo,
+        onVolverALogin = onVolverALogin
+    )
+}
+
+@Composable
+private fun ContenidoRecuperarContrasena(
+    uiState: RecuperarContrasenaUiState,
+    onEmailCambia: (String) -> Unit,
+    onEnviarCorreo: () -> Unit,
+    onVolverALogin: () -> Unit
+) {
+    val colorEtiqueta = MaterialTheme.colorScheme.background
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PageBackground)
+            .background(MaterialTheme.colorScheme.primary)
     ) {
         Column(
             modifier = Modifier
@@ -62,16 +67,14 @@ fun RecuperarContrasenaScreen(
         ) {
             Text(
                 text = "TransAndina",
-                fontFamily = FontFamily.Serif,
-                fontSize = 34.sp,
-                color = OrangeAccent
+                style = EstiloLogotipo,
+                color = TransAndinaTheme.colores.naranjaLogo
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Recuperar contraseña",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onPrimary
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -79,90 +82,76 @@ fun RecuperarContrasenaScreen(
             if (uiState.correoEnviado) {
                 Text(
                     text = "Te enviamos un correo con un enlace para restablecer tu contraseña. " +
-                            "Ábrelo desde este mismo dispositivo.",
+                        "Ábrelo desde este mismo dispositivo.",
+                    style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
-                    color = TextMuted,
-                    fontSize = 14.sp
+                    color = MaterialTheme.colorScheme.background
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 TextButton(onClick = onVolverALogin) {
-                    Text("Volver a iniciar sesión", color = OrangeAccent, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Volver a iniciar sesión",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
                 }
             } else {
                 Text(
                     text = "Ingresa tu correo y te mandamos un enlace para restablecer tu contraseña.",
+                    style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
-                    color = TextMuted,
-                    fontSize = 14.sp
+                    color = MaterialTheme.colorScheme.background
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
                 CampoTexto(
-                    label = "Correo electrónico",
-                    value = uiState.email,
-                    onValueChange = viewModel::onEmailChange
+                    etiqueta = "Correo electrónico",
+                    valor = uiState.email,
+                    onValorCambia = onEmailCambia,
+                    colorEtiqueta = colorEtiqueta,
+                    tipoTeclado = KeyboardType.Email
                 )
 
                 uiState.error?.let {
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(text = it, color = ErrorColor, fontSize = 13.sp)
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Button(
-                    onClick = viewModel::enviarCorreo,
-                    enabled = !uiState.cargando,
-                    shape = RoundedCornerShape(28.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = OrangeAccent,
-                        contentColor = Color.White
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                ) {
-                    if (uiState.cargando) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = Color.White
-                        )
-                    } else {
-                        Text("Enviar enlace", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
+                BotonPrimario(
+                    texto = "Enviar enlace",
+                    onClick = onEnviarCorreo,
+                    modifier = Modifier.fillMaxWidth(),
+                    cargando = uiState.cargando
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(onClick = onVolverALogin) {
-                    Text("Volver a iniciar sesión", color = TextPrimary, fontSize = 13.sp)
+                    Text(
+                        text = "Volver a iniciar sesión",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
                 }
             }
         }
     }
 }
 
+@Preview(showBackground = true, heightDp = 800)
 @Composable
-private fun CampoTexto(label: String, value: String, onValueChange: (String) -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = label, color = TextPrimary, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(6.dp))
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            shape = RoundedCornerShape(24.dp),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = FieldBackground,
-                unfocusedContainerColor = FieldBackground,
-                disabledContainerColor = FieldBackground,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-                focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black,
-                cursorColor = OrangeAccent
-            ),
-            modifier = Modifier.fillMaxWidth()
+private fun RecuperarContrasenaScreenPreview() {
+    TransAndinaFlotillaTheme {
+        ContenidoRecuperarContrasena(
+            uiState = RecuperarContrasenaUiState(email = "carlos@transandina.cr"),
+            onEmailCambia = {},
+            onEnviarCorreo = {},
+            onVolverALogin = {}
         )
     }
 }

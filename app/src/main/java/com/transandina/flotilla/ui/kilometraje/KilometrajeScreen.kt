@@ -2,305 +2,180 @@ package com.transandina.flotilla.ui.kilometraje
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.transandina.flotilla.ui.components.BotonConfirmar
+import com.transandina.flotilla.ui.components.CampoTexto
+import com.transandina.flotilla.ui.components.EstadoVacio
+import com.transandina.flotilla.ui.components.TarjetaTransAndina
+import com.transandina.flotilla.ui.components.TransAndinaTopBar
+import com.transandina.flotilla.ui.theme.FormaPildora
+import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
+import com.transandina.flotilla.ui.theme.TransAndinaTheme
 
+/** Registro del recorrido del vehículo (Figma `51:174`). */
 @Composable
 fun KilometrajeScreen(
-    viewModel: KilometrajeViewModel = viewModel()
+    viewModel: KilometrajeViewModel = viewModel(),
+    onBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
-    // Colores de TransAndina
-    val azulOscuro = Color(0xFF0D2948)
-    val naranja = Color(0xFFD26320)
-    val blanco = Color(0xFFFFFFFF)
-    val grisClaro = Color(0xFFD0D3D8)
-    val grisTexto = Color(0xFF4A4A4A)
-    val grisPlaceholder = Color(0xFF9DA3AC)
-    val grisFondo = Color(0xFFF5F6F7)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(blanco)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-
-        // =====================================================
-        // HEADER
-        // =====================================================
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(155.dp)
-                .background(azulOscuro)
-                .padding(horizontal = 22.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-
-            IconButton(
-                onClick = {
-                    // Acción para regresar
-                },
-                modifier = Modifier.size(50.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Regresar",
-                    tint = blanco,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-
-            Text(
-                text = "Registrar kilometraje",
-                color = blanco,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 28.dp)
-            )
-        }
-
-        // =====================================================
-        // CONTENIDO
-        // =====================================================
+        TransAndinaTopBar(
+            titulo = "Registrar kilometraje",
+            subtitulo = uiState.vehiculo?.let { "${it.placa} · ${it.marca} ${it.modelo}" },
+            onAtras = onBack
+        )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(blanco)
-                .padding(horizontal = 36.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(16.dp)
         ) {
-
-            Spacer(modifier = Modifier.height(30.dp))
-
-            // ----------------------------------------
-            // CARGANDO VEHÍCULO
-            // ----------------------------------------
-
-            if (uiState.vehiculo == null && uiState.cargando) {
-                CircularProgressIndicator(
-                    color = naranja,
-                    modifier = Modifier.size(40.dp)
-                )
-                return@Column
-            }
-
-            // ----------------------------------------
-            // VEHÍCULO
-            // ----------------------------------------
-
             val vehiculo = uiState.vehiculo
 
-            if (vehiculo == null) {
-                Text(
-                    text = uiState.error ?: "No tienes un vehículo asignado",
-                    color = grisTexto,
-                    fontSize = 15.sp
-                )
+            if (vehiculo == null && uiState.cargando) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
                 return@Column
             }
 
-            // ----------------------------------------
-            // INFORMACIÓN DEL VEHÍCULO
-            // ----------------------------------------
-
-            Text(
-                text = "${vehiculo.marca} ${vehiculo.modelo}",
-                color = azulOscuro,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = "Placa: ${vehiculo.placa}",
-                color = grisTexto,
-                fontSize = 14.sp
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // ----------------------------------------
-            // KILOMETRAJE ACTUAL
-            // ----------------------------------------
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = grisFondo,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                Text(
-                    text = "Kilometraje actual",
-                    color = grisTexto,
-                    fontSize = 13.sp
-                )
-
-                Spacer(modifier = Modifier.height(5.dp))
-
-                Text(
-                    text = "${vehiculo.kmActual} km",
-                    color = azulOscuro,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
+            if (vehiculo == null) {
+                EstadoVacio(mensaje = uiState.error ?: "No tienes un vehículo asignado")
+                return@Column
             }
 
-            Spacer(modifier = Modifier.height(30.dp))
-
-            // ----------------------------------------
-            // NUEVO KILOMETRAJE
-            // ----------------------------------------
-
-            Text(
-                text = "Nuevo kilometraje",
-                color = azulOscuro,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 7.dp)
-            )
-
-            OutlinedTextField(
-                value = uiState.kmIngresado,
-                onValueChange = viewModel::onKmChange,
-
-                placeholder = {
+            TarjetaTransAndina {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     Text(
-                        text = "Ingrese el kilometraje",
-                        color = grisPlaceholder,
-                        fontSize = 12.sp
+                        text = "Kilometraje actual",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TransAndinaTheme.colores.textoSecundario
                     )
-                },
-
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number
-                ),
-
-                singleLine = true,
-
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-
-                shape = RoundedCornerShape(10.dp),
-
-                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = blanco,
-                    unfocusedContainerColor = blanco,
-                    focusedBorderColor = naranja,
-                    unfocusedBorderColor = grisClaro,
-                    focusedTextColor = grisTexto,
-                    unfocusedTextColor = grisTexto
-                )
-            )
-
-            // ----------------------------------------
-            // ERROR
-            // ----------------------------------------
-
-            uiState.error?.let {
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = it,
-                    color = Color(0xFFD32F2F),
-                    fontSize = 12.sp
-                )
-            }
-
-            // ----------------------------------------
-            // MENSAJE DE ÉXITO
-            // ----------------------------------------
-
-            if (uiState.exito) {
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = "Kilometraje actualizado correctamente",
-                    color = Color(0xFF388E3C),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(30.dp))
-
-            // ----------------------------------------
-            // BOTÓN GUARDAR
-            // ----------------------------------------
-
-            Button(
-                onClick = viewModel::registrarKilometraje,
-                enabled = !uiState.cargando,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = naranja,
-                    disabledContainerColor = naranja.copy(alpha = 0.6f)
-                )
-            ) {
-
-                if (uiState.cargando) {
-
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = blanco,
-                        strokeWidth = 2.dp
-                    )
-
-                } else {
-
                     Text(
-                        text = "Guardar",
-                        color = blanco,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "${vehiculo.kmActual} km",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            CampoTexto(
+                etiqueta = "Nuevo kilometraje",
+                valor = uiState.kmIngresado,
+                onValorCambia = viewModel::onKmChange,
+                marcadorDePosicion = "Ingrese el kilometraje",
+                forma = FormaPildora,
+                tipoTeclado = KeyboardType.Number
+            )
+
+            uiState.error?.let {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            if (uiState.exito) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "Kilometraje actualizado correctamente",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TransAndinaTheme.colores.estadoOk
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            BotonConfirmar(
+                texto = "Guardar",
+                onClick = viewModel::registrarKilometraje,
+                modifier = Modifier.fillMaxWidth(),
+                cargando = uiState.cargando
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, heightDp = 700)
+@Composable
+private fun KilometrajeScreenPreview() {
+    TransAndinaFlotillaTheme {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            TransAndinaTopBar(
+                titulo = "Registrar kilometraje",
+                subtitulo = "SCD-3421 · Nissan Frontier",
+                onAtras = {}
+            )
+            Column(modifier = Modifier.padding(16.dp)) {
+                TarjetaTransAndina {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Kilometraje actual",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TransAndinaTheme.colores.textoSecundario
+                        )
+                        Text(
+                            text = "492400.0 km",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                CampoTexto(
+                    etiqueta = "Nuevo kilometraje",
+                    valor = "",
+                    onValorCambia = {},
+                    marcadorDePosicion = "Ingrese el kilometraje",
+                    forma = FormaPildora,
+                    tipoTeclado = KeyboardType.Number
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                BotonConfirmar("Guardar", {}, Modifier.fillMaxWidth())
+            }
         }
     }
 }

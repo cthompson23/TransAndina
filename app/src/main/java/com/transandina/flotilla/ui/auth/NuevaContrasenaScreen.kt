@@ -9,36 +9,27 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.transandina.flotilla.ui.components.BotonPrimario
+import com.transandina.flotilla.ui.components.CampoContrasena
+import com.transandina.flotilla.ui.theme.EstiloLogotipo
+import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
+import com.transandina.flotilla.ui.theme.TransAndinaTheme
 
-// Misma paleta que LoginScreen / RegistroScreen / PerfilScreen / HomeScreen
-// — pendiente moverla a un Color.kt compartido (ui/theme/Color.kt).
-private val PageBackground = Color(0xFFD9D9D9)
-private val OrangeAccent = Color(0xFFBB6B2E)
-private val FieldBackground = Color(0xFFFFFFFF)
-private val TextPrimary = Color(0xFF13263F)
-private val ErrorColor = Color(0xFFC62828)
-
+/**
+ * Pantalla a la que se llega desde el correo de recuperación (Figma `1:352`).
+ * A diferencia del resto de auth, su fondo es claro.
+ */
 @Composable
 fun NuevaContrasenaScreen(
     viewModel: NuevaContrasenaViewModel = viewModel(),
@@ -50,10 +41,25 @@ fun NuevaContrasenaScreen(
         if (uiState.actualizada) onContrasenaActualizada()
     }
 
+    ContenidoNuevaContrasena(
+        uiState = uiState,
+        onPasswordCambia = viewModel::onPasswordChange,
+        onConfirmarPasswordCambia = viewModel::onConfirmarPasswordChange,
+        onGuardar = viewModel::guardarNuevaContrasena
+    )
+}
+
+@Composable
+private fun ContenidoNuevaContrasena(
+    uiState: NuevaContrasenaUiState,
+    onPasswordCambia: (String) -> Unit,
+    onConfirmarPasswordCambia: (String) -> Unit,
+    onGuardar: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PageBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -63,89 +69,62 @@ fun NuevaContrasenaScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Trasandina",
-                fontFamily = FontFamily.Serif,
-                fontSize = 26.sp,
-                color = OrangeAccent
+                text = "TransAndina",
+                style = EstiloLogotipo,
+                color = TransAndinaTheme.colores.naranjaLogo
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Nueva contraseña",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(28.dp))
 
             CampoContrasena(
-                label = "Nueva contraseña",
-                value = uiState.password,
-                onValueChange = viewModel::onPasswordChange
+                etiqueta = "Nueva contraseña",
+                valor = uiState.password,
+                onValorCambia = onPasswordCambia
             )
             Spacer(modifier = Modifier.height(12.dp))
 
             CampoContrasena(
-                label = "Confirmar contraseña",
-                value = uiState.confirmarPassword,
-                onValueChange = viewModel::onConfirmarPasswordChange
+                etiqueta = "Confirmar contraseña",
+                valor = uiState.confirmarPassword,
+                onValorCambia = onConfirmarPasswordCambia
             )
 
             uiState.error?.let {
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(text = it, color = ErrorColor, fontSize = 13.sp)
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
-                onClick = viewModel::guardarNuevaContrasena,
-                enabled = !uiState.cargando,
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = OrangeAccent,
-                    contentColor = Color.White
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                if (uiState.cargando) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Color.White
-                    )
-                } else {
-                    Text("Guardar nueva contraseña", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-            }
+            BotonPrimario(
+                texto = "Guardar nueva contraseña",
+                onClick = onGuardar,
+                modifier = Modifier.fillMaxWidth(),
+                cargando = uiState.cargando
+            )
         }
     }
 }
 
+@Preview(showBackground = true, heightDp = 800)
 @Composable
-private fun CampoContrasena(label: String, value: String, onValueChange: (String) -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = label, color = TextPrimary, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(6.dp))
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            shape = RoundedCornerShape(24.dp),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = FieldBackground,
-                unfocusedContainerColor = FieldBackground,
-                disabledContainerColor = FieldBackground,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-                focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black,
-                cursorColor = OrangeAccent
-            ),
-            modifier = Modifier.fillMaxWidth()
+private fun NuevaContrasenaScreenPreview() {
+    TransAndinaFlotillaTheme {
+        ContenidoNuevaContrasena(
+            uiState = NuevaContrasenaUiState(password = "secreta"),
+            onPasswordCambia = {},
+            onConfirmarPasswordCambia = {},
+            onGuardar = {}
         )
     }
 }

@@ -8,14 +8,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,8 +18,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -36,6 +29,7 @@ import com.transandina.flotilla.ui.auth.LoginScreen
 import com.transandina.flotilla.ui.auth.NuevaContrasenaScreen
 import com.transandina.flotilla.ui.auth.RecuperarContrasenaScreen
 import com.transandina.flotilla.ui.auth.RegistroScreen
+import com.transandina.flotilla.ui.components.TransAndinaBottomBar
 import com.transandina.flotilla.ui.encargado.EstadoScreen
 import com.transandina.flotilla.ui.encargado.HistorialScreen
 import com.transandina.flotilla.ui.encargado.ReasignacionScreen
@@ -47,6 +41,7 @@ import com.transandina.flotilla.ui.navigation.BottomNavItem
 import com.transandina.flotilla.ui.navigation.itemsParaRol
 import com.transandina.flotilla.ui.notificaciones.NotificacionesScreen
 import com.transandina.flotilla.ui.perfil.PerfilScreen
+import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
 import com.transandina.flotilla.ui.vehiculo.VehiculoScreen
 import io.github.jan.supabase.auth.handleDeeplinks
 
@@ -58,16 +53,6 @@ private const val RUTA_NUEVA_CONTRASENA = "nueva-contrasena"
 private val RUTAS_SIN_BARRA_INFERIOR = setOf(
     RUTA_LOGIN, RUTA_REGISTRO, RUTA_RECUPERAR_CONTRASENA, RUTA_NUEVA_CONTRASENA
 )
-
-// Misma paleta que LoginScreen / RegistroScreen / NuevaContrasenaScreen /
-// RecuperarContrasenaScreen / PerfilScreen / HomeScreen — pendiente
-// moverla a un Color.kt compartido (ui/theme/Color.kt).
-// El fondo de las pantallas es gris claro; la barra inferior se mantiene
-// en navy, igual que el encabezado "TransAndina" de Home y Perfil.
-private val PageBackground = Color(0xFFD9D9D9)
-private val NavyBarra = Color(0xFF0F2135)
-private val OrangeAccent = Color(0xFFBB6B2E)
-private val IconoInactivo = Color(0xFF7C8CA3)
 
 class MainActivity : ComponentActivity() {
 
@@ -89,7 +74,7 @@ class MainActivity : ComponentActivity() {
         )
         manejarPosibleDeepLink(intent)
         setContent {
-            MaterialTheme {
+            TransAndinaFlotillaTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     AppNavigation(
                         deepLinkRecuperacion = deepLinkRecuperacion,
@@ -156,45 +141,22 @@ private fun AppNavigation(
     }
 
     Scaffold(
-        containerColor = PageBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             if (mostrarBarraInferior) {
-                NavigationBar(
-                    containerColor = NavyBarra,
-                    tonalElevation = 0.dp
-                ) {
-                    itemsMenu.forEach { item ->
-                        val seleccionado = rutaActual == item.ruta
-                        NavigationBarItem(
-                            selected = seleccionado,
-                            onClick = {
-                                navController.navigate(item.ruta) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = {
-                                Icon(imageVector = item.icono, contentDescription = item.etiqueta)
-                            },
-                            label = if (item.etiqueta.isNotBlank()) {
-                                { Text(item.etiqueta) }
-                            } else {
-                                null
-                            },
-                            alwaysShowLabel = false,
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Color.White,
-                                selectedTextColor = OrangeAccent,
-                                indicatorColor = OrangeAccent,
-                                unselectedIconColor = IconoInactivo,
-                                unselectedTextColor = IconoInactivo
-                            )
-                        )
+                TransAndinaBottomBar(
+                    items = itemsMenu,
+                    rutaActual = rutaActual,
+                    onSeleccionar = { item ->
+                        navController.navigate(item.ruta) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
+                )
             }
         }
     ) { paddingInterno ->

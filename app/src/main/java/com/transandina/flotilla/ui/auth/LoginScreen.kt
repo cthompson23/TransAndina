@@ -11,51 +11,32 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.transandina.flotilla.data.model.RolUsuario
+import com.transandina.flotilla.ui.components.BotonPrimario
+import com.transandina.flotilla.ui.components.CampoContrasena
+import com.transandina.flotilla.ui.components.CampoTexto
+import com.transandina.flotilla.ui.theme.EstiloLogotipo
+import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
+import com.transandina.flotilla.ui.theme.TransAndinaTheme
 
-// Paleta de la marca Trasandina
-private val NavyBackground = Color(0xFF13263F)
-private val OrangeAccent = Color(0xFFBB6B2E)
-private val FieldBackground = Color(0xFFFFFFFF)
-private val FieldPlaceholder = Color(0xFF8A8A8A)
-private val LinkTextColor = Color(0xFFE7E7E7)
-
+/** Pantalla de inicio de sesión (Figma `1:404`). */
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel = viewModel(),
@@ -64,17 +45,39 @@ fun LoginScreen(
     onRegistrarse: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var passwordVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.autenticado, uiState.rol) {
         val rol = uiState.rol
         if (uiState.autenticado && rol != null) onLoginExitoso(rol)
     }
 
+    ContenidoLogin(
+        uiState = uiState,
+        onEmailCambia = viewModel::onEmailChange,
+        onPasswordCambia = viewModel::onPasswordChange,
+        onIniciarSesion = viewModel::iniciarSesion,
+        onRecuperarContrasena = onRecuperarContrasena,
+        onRegistrarse = onRegistrarse
+    )
+}
+
+@Composable
+private fun ContenidoLogin(
+    uiState: LoginUiState,
+    onEmailCambia: (String) -> Unit,
+    onPasswordCambia: (String) -> Unit,
+    onIniciarSesion: () -> Unit,
+    onRecuperarContrasena: () -> Unit,
+    onRegistrarse: () -> Unit
+) {
+    // Las pantallas de auth van sobre fondo navy, con las etiquetas en gris
+    // claro (Figma `1:404`).
+    val colorEtiqueta = MaterialTheme.colorScheme.background
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NavyBackground)
+            .background(MaterialTheme.colorScheme.primary)
     ) {
         Column(
             modifier = Modifier
@@ -86,9 +89,8 @@ fun LoginScreen(
 
             Text(
                 text = "TransAndina",
-                fontFamily = FontFamily.Serif,
-                fontSize = 34.sp,
-                color = OrangeAccent,
+                style = EstiloLogotipo,
+                color = TransAndinaTheme.colores.naranjaLogo,
                 textAlign = TextAlign.Center
             )
 
@@ -96,52 +98,30 @@ fun LoginScreen(
 
             Text(
                 text = "Iniciar sesión",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onPrimary,
                 textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            LabeledField(
-                label = "Correo electrónico",
-                value = uiState.email,
-                onValueChange = viewModel::onEmailChange,
-                placeholder = "ejemplo@correo.com",
-                keyboardType = KeyboardType.Email
+            CampoTexto(
+                etiqueta = "Correo electrónico",
+                valor = uiState.email,
+                onValorCambia = onEmailCambia,
+                marcadorDePosicion = "ejemplo@correo.com",
+                colorEtiqueta = colorEtiqueta,
+                tipoTeclado = KeyboardType.Email
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            LabeledField(
-                label = "Contraseña",
-                value = uiState.password,
-                onValueChange = viewModel::onPasswordChange,
-                placeholder = "Escribir la contraseña",
-                keyboardType = KeyboardType.Password,
-                visualTransformation = if (passwordVisible) {
-                    VisualTransformation.None
-                } else {
-                    PasswordVisualTransformation()
-                },
-                trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            imageVector = if (passwordVisible) {
-                                Icons.Filled.VisibilityOff
-                            } else {
-                                Icons.Filled.Visibility
-                            },
-                            contentDescription = if (passwordVisible) {
-                                "Ocultar contraseña"
-                            } else {
-                                "Mostrar contraseña"
-                            },
-                            tint = FieldPlaceholder
-                        )
-                    }
-                }
+            CampoContrasena(
+                etiqueta = "Contraseña",
+                valor = uiState.password,
+                onValorCambia = onPasswordCambia,
+                marcadorDePosicion = "Escribir la contraseña",
+                colorEtiqueta = colorEtiqueta
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -150,8 +130,8 @@ fun LoginScreen(
                 TextButton(onClick = onRecuperarContrasena) {
                     Text(
                         text = "Recuperar contraseña",
-                        color = LinkTextColor,
-                        fontSize = 13.sp
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.background
                     )
                 }
             }
@@ -160,6 +140,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = it,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -168,31 +149,12 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
-                onClick = viewModel::iniciarSesion,
-                enabled = !uiState.cargando,
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = OrangeAccent,
-                    contentColor = Color.White
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                if (uiState.cargando) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Color.White
-                    )
-                } else {
-                    Text(
-                        text = "Ingresar",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+            BotonPrimario(
+                texto = "Ingresar",
+                onClick = onIniciarSesion,
+                modifier = Modifier.fillMaxWidth(),
+                cargando = uiState.cargando
+            )
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -202,23 +164,24 @@ fun LoginScreen(
             ) {
                 Text(
                     text = "¿No tienes una cuenta?",
-                    color = Color.White,
-                    fontSize = 13.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.background
                 )
                 Spacer(modifier = Modifier.width(8.dp))
+                // El botón de registro es más pequeño que el principal y usa
+                // el naranja del logotipo (Figma `1:414`).
                 Button(
                     onClick = onRegistrarse,
-                    shape = RoundedCornerShape(20.dp),
+                    shape = MaterialTheme.shapes.small,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = OrangeAccent,
-                        contentColor = Color.White
+                        containerColor = TransAndinaTheme.colores.naranjaLogo,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Text(
                         text = "Regístrate aquí",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleMedium
                     )
                 }
             }
@@ -228,44 +191,17 @@ fun LoginScreen(
     }
 }
 
+@Preview(showBackground = true, heightDp = 800)
 @Composable
-private fun LabeledField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    keyboardType: KeyboardType = KeyboardType.Text,
-    visualTransformation: VisualTransformation = VisualTransformation.None,
-    trailingIcon: @Composable (() -> Unit)? = null
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            color = Color.White,
-            fontSize = 14.sp
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            placeholder = { Text(text = placeholder, color = FieldPlaceholder) },
-            visualTransformation = visualTransformation,
-            trailingIcon = trailingIcon,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            shape = RoundedCornerShape(24.dp),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = FieldBackground,
-                unfocusedContainerColor = FieldBackground,
-                disabledContainerColor = FieldBackground,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-                focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black,
-                cursorColor = OrangeAccent
-            ),
-            modifier = Modifier.fillMaxWidth()
+private fun LoginScreenPreview() {
+    TransAndinaFlotillaTheme {
+        ContenidoLogin(
+            uiState = LoginUiState(email = "carlos@transandina.cr"),
+            onEmailCambia = {},
+            onPasswordCambia = {},
+            onIniciarSesion = {},
+            onRecuperarContrasena = {},
+            onRegistrarse = {}
         )
     }
 }

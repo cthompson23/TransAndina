@@ -10,41 +10,32 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.transandina.flotilla.data.model.RolUsuario
+import com.transandina.flotilla.data.model.Vehiculo
+import com.transandina.flotilla.ui.components.ChipEstado
+import com.transandina.flotilla.ui.components.EstadoVacio
+import com.transandina.flotilla.ui.components.NivelEstado
+import com.transandina.flotilla.ui.components.TarjetaTransAndina
+import com.transandina.flotilla.ui.components.TransAndinaTopBar
+import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
+import com.transandina.flotilla.ui.theme.TransAndinaTheme
 import com.transandina.flotilla.ui.vehiculo.EstadoDocumento
 import com.transandina.flotilla.ui.vehiculo.calcularEstadoDocumento
-
-// Misma paleta que LoginScreen / PerfilScreen / MainActivity — pendiente
-// moverla a un Color.kt compartido (ui/theme/Color.kt).
-private val PageBackground = Color(0xFFD9D9D9)
-private val NavyTopBar = Color(0xFF13263F)
-private val OrangeAccent = Color(0xFFBB6B2E)
-private val CardBackground = Color(0xFFFFFFFF)
-private val TextPrimary = Color(0xFF13263F)
-private val MutedText = Color(0xFF8A8A8A)
-private val SubtleTextColor = Color(0xFF5A6472)
 
 /**
  * Punto de entrada único de la pestaña "Inicio". El contenido real
@@ -54,7 +45,9 @@ private val SubtleTextColor = Color(0xFF5A6472)
 @Composable
 fun HomeScreen(rol: RolUsuario) {
     Column(modifier = Modifier.fillMaxSize()) {
-        TransAndinaTopBar()
+        // Encabezado fijo de marca, igual en todas las pestañas de Inicio
+        // (Figma `1:1225`).
+        TransAndinaTopBar(titulo = "TransAndina")
         Box(modifier = Modifier.weight(1f)) {
             when (rol) {
                 RolUsuario.conductor -> HomeConductorContent()
@@ -62,29 +55,6 @@ fun HomeScreen(rol: RolUsuario) {
                 RolUsuario.encargado -> HomeEncargadoContent()
             }
         }
-    }
-}
-
-/**
- * Encabezado fijo de marca, igual en todas las pestañas de Inicio
- * (el mismo navy que la barra inferior, para "encerrar" el contenido
- * gris entre las dos barras).
- */
-@Composable
-private fun TransAndinaTopBar() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(NavyTopBar)
-            .padding(vertical = 18.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "TransAndina",
-            color = Color.White,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
 
@@ -97,93 +67,88 @@ private fun HomeConductorContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PageBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .padding(16.dp)
         ) {
-            Text(
-                text = "Mi vehículo",
-                fontFamily = FontFamily.Serif,
-                fontSize = 28.sp,
-                color = OrangeAccent
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-
             when {
                 uiState.cargando && uiState.vehiculo == null -> {
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = OrangeAccent)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                     }
                 }
                 uiState.vehiculo == null -> {
-                    Text(
-                        text = uiState.error ?: "No tienes un vehículo asignado todavía",
-                        color = TextPrimary
+                    EstadoVacio(
+                        mensaje = uiState.error ?: "No tienes un vehículo asignado todavía"
                     )
                 }
                 else -> {
-                    val vehiculo = uiState.vehiculo!!
-                    val estados = listOf(
-                        calcularEstadoDocumento(vehiculo.fechaMarchamo),
-                        calcularEstadoDocumento(vehiculo.fechaRevisionTecnica),
-                        calcularEstadoDocumento(vehiculo.fechaSeguro)
-                    )
-                    val estadoGeneral = when {
-                        estados.any { it == EstadoDocumento.VENCIDO } -> EstadoDocumento.VENCIDO
-                        estados.any { it == EstadoDocumento.PROXIMO } -> EstadoDocumento.PROXIMO
-                        estados.all { it == EstadoDocumento.AL_DIA } -> EstadoDocumento.AL_DIA
-                        else -> EstadoDocumento.SIN_DATO
-                    }
+                    TarjetaVehiculoAsignado(vehiculo = uiState.vehiculo!!)
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(CardBackground, RoundedCornerShape(20.dp))
-                            .padding(20.dp)
-                    ) {
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "${vehiculo.marca} ${vehiculo.modelo}",
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.Black
-                                )
-                                EstadoBadge(estado = estadoGeneral)
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = "Placa: ${vehiculo.placa}", color = MutedText)
-                            Text(text = "Año: ${vehiculo.anio} · Tipo: ${vehiculo.tipo}", color = MutedText)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Kilometraje actual",
-                                fontSize = 13.sp,
-                                color = MutedText
-                            )
-                            Text(
-                                text = "${vehiculo.kmActual} km",
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = OrangeAccent
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "Ve a la pestaña Vehículo para ver el detalle de tus documentos.",
-                        fontSize = 13.sp,
-                        color = SubtleTextColor
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TransAndinaTheme.colores.textoSecundario
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Tarjeta del vehículo asignado: etiqueta, placa destacada y una línea de
+ * detalle, con el chip de estado a la derecha (Figma `28:407`).
+ */
+@Composable
+private fun TarjetaVehiculoAsignado(vehiculo: Vehiculo) {
+    val estados = listOf(
+        calcularEstadoDocumento(vehiculo.fechaMarchamo),
+        calcularEstadoDocumento(vehiculo.fechaRevisionTecnica),
+        calcularEstadoDocumento(vehiculo.fechaSeguro)
+    )
+    val estadoGeneral = when {
+        estados.any { it == EstadoDocumento.VENCIDO } -> EstadoDocumento.VENCIDO
+        estados.any { it == EstadoDocumento.PROXIMO } -> EstadoDocumento.PROXIMO
+        estados.all { it == EstadoDocumento.AL_DIA } -> EstadoDocumento.AL_DIA
+        else -> EstadoDocumento.SIN_DATO
+    }
+
+    TarjetaTransAndina {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Mi vehículo",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TransAndinaTheme.colores.textoSecundario
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = vehiculo.placa,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${vehiculo.marca} ${vehiculo.modelo} · ${vehiculo.kmActual} km",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TransAndinaTheme.colores.textoTerciario
+                )
+                Text(
+                    text = "Año: ${vehiculo.anio} · Tipo: ${vehiculo.tipo}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TransAndinaTheme.colores.textoTerciario
+                )
+            }
+            ChipEstadoDocumento(estado = estadoGeneral)
         }
     }
 }
@@ -218,68 +183,67 @@ private fun HomeEncargadoContent() {
 
 @Composable
 private fun PlaceholderContent(
-    icono: androidx.compose.ui.graphics.vector.ImageVector,
+    icono: ImageVector,
     titulo: String,
     mensaje: String
 ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PageBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
             Text(
                 text = titulo,
-                fontFamily = FontFamily.Serif,
-                fontSize = 28.sp,
-                color = OrangeAccent
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground
             )
-            Spacer(modifier = Modifier.height(48.dp))
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(CircleShape)
-                        .background(OrangeAccent),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icono,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = mensaje,
-                    color = SubtleTextColor,
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center
-                )
-            }
+            Spacer(modifier = Modifier.height(24.dp))
+            EstadoVacio(mensaje = mensaje, icono = icono)
         }
     }
 }
 
+/** Traduce el estado de los documentos al chip del sistema de diseño. */
 @Composable
-private fun EstadoBadge(estado: EstadoDocumento) {
-    val (texto, color) = when (estado) {
-        EstadoDocumento.AL_DIA -> "Al día" to Color(0xFF2E7D32)
-        EstadoDocumento.PROXIMO -> "Próximo" to Color(0xFFF9A825)
-        EstadoDocumento.VENCIDO -> "Atrasado" to Color(0xFFC62828)
-        EstadoDocumento.SIN_DATO -> "Sin datos" to Color.Gray
+private fun ChipEstadoDocumento(estado: EstadoDocumento) {
+    val (texto, nivel) = when (estado) {
+        EstadoDocumento.AL_DIA -> "Al día" to NivelEstado.OK
+        EstadoDocumento.PROXIMO -> "Próximo" to NivelEstado.AVISO
+        EstadoDocumento.VENCIDO -> "Atrasado" to NivelEstado.CRITICO
+        EstadoDocumento.SIN_DATO -> "Sin datos" to NivelEstado.INFO
     }
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(color)
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-    ) {
-        Text(text = texto, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    ChipEstado(texto = texto, nivel = nivel)
+}
+
+@Preview(showBackground = true, heightDp = 700)
+@Composable
+private fun HomeConductorPreview() {
+    TransAndinaFlotillaTheme {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TransAndinaTopBar(titulo = "TransAndina")
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(16.dp)
+            ) {
+                TarjetaVehiculoAsignado(
+                    vehiculo = Vehiculo(
+                        id = "1",
+                        placa = "SCD-3421",
+                        marca = "Nissan",
+                        modelo = "Frontier",
+                        anio = 2021,
+                        tipo = "Liviano",
+                        kmActual = 492_400.0
+                    )
+                )
+            }
+        }
     }
 }

@@ -13,27 +13,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,27 +31,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.transandina.flotilla.data.model.RolUsuario
+import com.transandina.flotilla.data.model.Usuario
+import com.transandina.flotilla.ui.components.BotonDestructivo
+import com.transandina.flotilla.ui.components.BotonPrimario
+import com.transandina.flotilla.ui.components.CampoTexto
+import com.transandina.flotilla.ui.components.DatoEtiquetado
+import com.transandina.flotilla.ui.components.EstadoVacio
+import com.transandina.flotilla.ui.components.FilaBotonesFormulario
+import com.transandina.flotilla.ui.components.TransAndinaTopBar
+import com.transandina.flotilla.ui.theme.FormaPildora
+import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
+import com.transandina.flotilla.ui.theme.TransAndinaTheme
 
-// Misma paleta que LoginScreen / HomeScreen / MainActivity — pendiente
-// moverla a un Color.kt compartido (ui/theme/Color.kt) para no repetirla.
-private val PageBackground = Color(0xFFD9D9D9)
-private val NavyBackground = Color(0xFF13263F)
-private val OrangeAccent = Color(0xFFBB6B2E)
-private val FieldBackground = Color(0xFFFFFFFF)
-private val FieldPlaceholder = Color(0xFF8A8A8A)
-private val TextPrimary = Color(0xFF13263F)
-private val TextMuted = Color(0xFF6B7280)
-private val SuccessColor = Color(0xFF2E7D32)
-private val ErrorColor = Color(0xFFC62828)
-
+/** Perfil del usuario con sesión iniciada (Figma `28:163`, `28:263`). */
 @Composable
 fun PerfilScreen(
     viewModel: PerfilViewModel = viewModel(),
@@ -72,65 +58,40 @@ fun PerfilScreen(
     var mostrarDialogoCerrarSesion by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TransAndinaTopBar()
+        TransAndinaTopBar(titulo = "Perfil")
 
         Box(
             modifier = Modifier
                 .weight(1f)
-                .background(PageBackground)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 24.dp)
+                    .padding(16.dp)
             ) {
-                Text(
-                    text = "Perfil",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
                 when {
                     uiState.cargando && uiState.usuario == null -> {
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = OrangeAccent)
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                         }
                     }
                     uiState.usuario == null -> {
-                        Text(
-                            text = "No se pudo cargar tu perfil",
-                            color = TextPrimary,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        EstadoVacio(mensaje = "No se pudo cargar tu perfil")
                     }
                     uiState.editando -> {
                         FormularioEdicion(uiState = uiState, viewModel = viewModel)
                     }
                     else -> {
-                        VistaPerfil(uiState = uiState, viewModel = viewModel)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    TextButton(onClick = { mostrarDialogoCerrarSesion = true }) {
-                        Icon(
-                            imageVector = Icons.Filled.Logout,
-                            contentDescription = null,
-                            tint = ErrorColor,
-                            modifier = Modifier.size(18.dp)
+                        VistaPerfil(
+                            uiState = uiState,
+                            onEditar = viewModel::iniciarEdicion,
+                            onCerrarSesion = { mostrarDialogoCerrarSesion = true }
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Cerrar sesión", color = ErrorColor, fontSize = 14.sp)
                     }
                 }
             }
@@ -140,8 +101,14 @@ fun PerfilScreen(
     if (mostrarDialogoCerrarSesion) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoCerrarSesion = false },
-            title = { Text("Cerrar sesión") },
-            text = { Text("¿Seguro que quieres cerrar sesión?") },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Cerrar sesión", style = MaterialTheme.typography.titleLarge) },
+            text = {
+                Text(
+                    text = "¿Seguro que quieres cerrar sesión?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -149,43 +116,24 @@ fun PerfilScreen(
                         viewModel.cerrarSesion(onSesionCerrada)
                     }
                 ) {
-                    Text("Cerrar sesión", color = ErrorColor)
+                    Text("Cerrar sesión", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { mostrarDialogoCerrarSesion = false }) {
-                    Text("Cancelar")
+                    Text("Cancelar", color = TransAndinaTheme.colores.textoSecundario)
                 }
             }
         )
     }
 }
 
-/**
- * Encabezado fijo de marca, igual al de HomeScreen — navy sólido con
- * "TransAndina" centrado, para mantener el mismo lenguaje visual en
- * todas las pestañas.
- */
 @Composable
-private fun TransAndinaTopBar() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(NavyBackground)
-            .padding(vertical = 18.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "TransAndina",
-            color = Color.White,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-private fun VistaPerfil(uiState: PerfilUiState, viewModel: PerfilViewModel) {
+private fun VistaPerfil(
+    uiState: PerfilUiState,
+    onEditar: () -> Unit,
+    onCerrarSesion: () -> Unit
+) {
     val usuario = uiState.usuario!!
 
     if (uiState.guardadoExitoso) {
@@ -193,37 +141,60 @@ private fun VistaPerfil(uiState: PerfilUiState, viewModel: PerfilViewModel) {
             Icon(
                 imageVector = Icons.Filled.CheckCircle,
                 contentDescription = null,
-                tint = SuccessColor,
+                tint = TransAndinaTheme.colores.estadoOk,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Perfil actualizado correctamente", color = SuccessColor, fontSize = 13.sp)
+            Text(
+                text = "Perfil actualizado correctamente",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TransAndinaTheme.colores.estadoOk
+            )
         }
         Spacer(modifier = Modifier.height(16.dp))
     }
 
+    // El Figma muestra los datos como etiqueta + valor separados por una
+    // línea fina, no como tarjetas (Figma `28:163`).
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        CampoSoloLectura(Icons.Filled.Person, "Nombre completo", usuario.nombreCompleto)
-        CampoSoloLectura(Icons.Filled.Badge, "Cédula", usuario.cedula)
-        CampoSoloLectura(Icons.Filled.Email, "Correo", usuario.email)
-        CampoSoloLectura(Icons.Filled.Phone, "Teléfono", usuario.telefono ?: "Sin registrar")
+        DatoConLinea(etiqueta = "Nombre completo", valor = usuario.nombreCompleto)
+        DatoConLinea(etiqueta = "Cédula", valor = usuario.cedula)
+        DatoConLinea(etiqueta = "Correo", valor = usuario.email)
+        DatoConLinea(etiqueta = "Teléfono", valor = usuario.telefono ?: "Sin registrar")
         if (usuario.rol == RolUsuario.conductor) {
-            CampoSoloLectura(
-                Icons.Filled.DirectionsCar,
-                "Licencia de conducir",
-                usuario.licenciaConducir ?: "Sin registrar"
+            DatoConLinea(
+                etiqueta = "Licencia de conducir",
+                valor = usuario.licenciaConducir ?: "Sin registrar"
             )
         }
-        CampoSoloLectura(Icons.Filled.Work, "Rol", usuario.rol.name)
+        DatoConLinea(etiqueta = "Rol", valor = usuario.rol.name)
     }
 
-    Spacer(modifier = Modifier.height(20.dp))
+    Spacer(modifier = Modifier.height(32.dp))
 
-    TextButton(
-        onClick = viewModel::iniciarEdicion,
-        modifier = Modifier.fillMaxWidth()
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Editar perfil", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = OrangeAccent)
+        BotonPrimario(
+            texto = "Editar perfil",
+            onClick = onEditar,
+            modifier = Modifier.weight(1f)
+        )
+        BotonDestructivo(
+            texto = "Cerrar sesión",
+            onClick = onCerrarSesion,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun DatoConLinea(etiqueta: String, valor: String) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        DatoEtiquetado(etiqueta = etiqueta, valor = valor)
+        Spacer(modifier = Modifier.height(8.dp))
+        HorizontalDivider(color = TransAndinaTheme.colores.placeholder)
     }
 }
 
@@ -232,102 +203,87 @@ private fun FormularioEdicion(uiState: PerfilUiState, viewModel: PerfilViewModel
     val usuario = uiState.usuario!!
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        CampoEditable("Nombre completo", uiState.nombreCompleto, viewModel::onNombreChange)
-        CampoEditable("Cédula", uiState.cedula, viewModel::onCedulaChange)
-        CampoEditable("Teléfono", uiState.telefono, viewModel::onTelefonoChange)
+        CampoTexto(
+            etiqueta = "Nombre completo",
+            valor = uiState.nombreCompleto,
+            onValorCambia = viewModel::onNombreChange,
+            forma = FormaPildora
+        )
+        CampoTexto(
+            etiqueta = "Cédula",
+            valor = uiState.cedula,
+            onValorCambia = viewModel::onCedulaChange,
+            forma = FormaPildora
+        )
+        CampoTexto(
+            etiqueta = "Teléfono",
+            valor = uiState.telefono,
+            onValorCambia = viewModel::onTelefonoChange,
+            forma = FormaPildora
+        )
 
         if (usuario.rol == RolUsuario.conductor) {
-            CampoEditable("Licencia de conducir", uiState.licenciaConducir, viewModel::onLicenciaChange)
+            CampoTexto(
+                etiqueta = "Licencia de conducir",
+                valor = uiState.licenciaConducir,
+                onValorCambia = viewModel::onLicenciaChange,
+                forma = FormaPildora
+            )
         }
 
-        CampoSoloLectura(Icons.Filled.Email, "Correo (no editable)", usuario.email)
-        CampoSoloLectura(Icons.Filled.Work, "Rol (no editable)", usuario.rol.name)
+        DatoConLinea(etiqueta = "Correo (no editable)", valor = usuario.email)
+        DatoConLinea(etiqueta = "Rol (no editable)", valor = usuario.rol.name)
 
         uiState.error?.let {
-            Text(text = it, color = ErrorColor, fontSize = 13.sp)
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Start
+            )
         }
     }
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        OutlinedButton(
-            onClick = viewModel::cancelarEdicion,
-            enabled = !uiState.guardando,
-            shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextMuted),
-            modifier = Modifier
-                .weight(1f)
-                .height(48.dp)
-        ) {
-            Text("Cancelar")
-        }
-        Button(
-            onClick = viewModel::guardarCambios,
-            enabled = !uiState.guardando,
-            shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = OrangeAccent, contentColor = Color.White),
-            modifier = Modifier
-                .weight(1f)
-                .height(48.dp)
-        ) {
-            if (uiState.guardando) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White)
-            } else {
-                Text("Guardar")
+    FilaBotonesFormulario(
+        textoAccion = "Guardar",
+        onAccion = viewModel::guardarCambios,
+        onCancelar = viewModel::cancelarEdicion,
+        cargando = uiState.guardando
+    )
+}
+
+@Preview(showBackground = true, heightDp = 800)
+@Composable
+private fun PerfilScreenPreview() {
+    TransAndinaFlotillaTheme {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TransAndinaTopBar(titulo = "Perfil")
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(16.dp)
+            ) {
+                Column {
+                    VistaPerfil(
+                        uiState = PerfilUiState(
+                            usuario = Usuario(
+                                id = "1",
+                                nombreCompleto = "Carlos Fernández Quesada",
+                                cedula = "1-1111-1111",
+                                email = "carlos@transandina.cr",
+                                telefono = "8889-9900",
+                                licenciaConducir = "B1-123456",
+                                rol = RolUsuario.conductor
+                            )
+                        ),
+                        onEditar = {},
+                        onCerrarSesion = {}
+                    )
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun CampoSoloLectura(icono: ImageVector, etiqueta: String, valor: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(FieldBackground, RoundedCornerShape(16.dp))
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icono,
-            contentDescription = null,
-            tint = FieldPlaceholder,
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(text = etiqueta, color = TextMuted, fontSize = 12.sp)
-            Text(text = valor, color = TextPrimary, fontSize = 15.sp)
-        }
-    }
-}
-
-@Composable
-private fun CampoEditable(etiqueta: String, valor: String, onValueChange: (String) -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = etiqueta, color = TextMuted, fontSize = 12.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-        TextField(
-            value = valor,
-            onValueChange = onValueChange,
-            singleLine = true,
-            shape = RoundedCornerShape(16.dp),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = FieldBackground,
-                unfocusedContainerColor = FieldBackground,
-                disabledContainerColor = FieldBackground,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary,
-                cursorColor = OrangeAccent
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
