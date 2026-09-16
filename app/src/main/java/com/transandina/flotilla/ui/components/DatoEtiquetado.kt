@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
@@ -21,7 +22,9 @@ import com.transandina.flotilla.ui.theme.TransAndinaTheme
 fun DatoEtiquetado(
     etiqueta: String,
     valor: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    colorEtiqueta: Color = TransAndinaTheme.colores.textoSecundario,
+    colorValor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -29,13 +32,13 @@ fun DatoEtiquetado(
     ) {
         Text(
             text = etiqueta,
-            style = MaterialTheme.typography.bodySmall,
-            color = TransAndinaTheme.colores.textoSecundario
+            style = MaterialTheme.typography.bodyMedium,
+            color = colorEtiqueta
         )
         Text(
             text = valor,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = colorValor
         )
     }
 }
