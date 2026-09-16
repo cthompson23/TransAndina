@@ -31,10 +31,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.transandina.flotilla.R
 import com.transandina.flotilla.data.model.RolUsuario
 import com.transandina.flotilla.data.model.Usuario
 import com.transandina.flotilla.ui.components.BotonDestructivo
@@ -44,11 +46,14 @@ import com.transandina.flotilla.ui.components.DatoEtiquetado
 import com.transandina.flotilla.ui.components.EstadoVacio
 import com.transandina.flotilla.ui.components.FilaBotonesFormulario
 import com.transandina.flotilla.ui.components.TransAndinaTopBar
-import com.transandina.flotilla.ui.theme.FormaPildora
+import com.transandina.flotilla.ui.components.VarianteCampo
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
 import com.transandina.flotilla.ui.theme.TransAndinaTheme
 
-/** Perfil del usuario con sesión iniciada (Figma `28:163`, `28:263`). */
+/**
+ * Perfil del usuario con sesión iniciada. En modo lectura sigue `28:163`
+ * y al editar cambia al encabezado y los botones de `28:263`.
+ */
 @Composable
 fun PerfilScreen(
     viewModel: PerfilViewModel = viewModel(),
@@ -57,8 +62,79 @@ fun PerfilScreen(
     val uiState by viewModel.uiState.collectAsState()
     var mostrarDialogoCerrarSesion by remember { mutableStateOf(false) }
 
+    ContenidoPerfil(
+        uiState = uiState,
+        onEditar = viewModel::iniciarEdicion,
+        onCancelarEdicion = viewModel::cancelarEdicion,
+        onGuardar = viewModel::guardarCambios,
+        onNombreCambia = viewModel::onNombreChange,
+        onCedulaCambia = viewModel::onCedulaChange,
+        onTelefonoCambia = viewModel::onTelefonoChange,
+        onLicenciaCambia = viewModel::onLicenciaChange,
+        onCerrarSesion = { mostrarDialogoCerrarSesion = true }
+    )
+
+    if (mostrarDialogoCerrarSesion) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoCerrarSesion = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = {
+                Text(
+                    text = stringResource(R.string.perfil_cerrar_sesion),
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.perfil_cerrar_sesion_pregunta),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        mostrarDialogoCerrarSesion = false
+                        viewModel.cerrarSesion(onSesionCerrada)
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.perfil_cerrar_sesion),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogoCerrarSesion = false }) {
+                    Text(
+                        text = stringResource(R.string.cancelar),
+                        color = TransAndinaTheme.colores.textoSecundario
+                    )
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ContenidoPerfil(
+    uiState: PerfilUiState,
+    onEditar: () -> Unit,
+    onCancelarEdicion: () -> Unit,
+    onGuardar: () -> Unit,
+    onNombreCambia: (String) -> Unit,
+    onCedulaCambia: (String) -> Unit,
+    onTelefonoCambia: (String) -> Unit,
+    onLicenciaCambia: (String) -> Unit,
+    onCerrarSesion: () -> Unit
+) {
     Column(modifier = Modifier.fillMaxSize()) {
-        TransAndinaTopBar(titulo = "Perfil")
+        TransAndinaTopBar(
+            titulo = if (uiState.editando) {
+                stringResource(R.string.perfil_editar_titulo)
+            } else {
+                stringResource(R.string.perfil_titulo)
+            }
+        )
 
         Box(
             modifier = Modifier
@@ -81,50 +157,32 @@ fun PerfilScreen(
                         }
                     }
                     uiState.usuario == null -> {
-                        EstadoVacio(mensaje = "No se pudo cargar tu perfil")
+                        EstadoVacio(
+                            mensaje = uiState.error
+                                ?: stringResource(R.string.perfil_error_carga)
+                        )
                     }
                     uiState.editando -> {
-                        FormularioEdicion(uiState = uiState, viewModel = viewModel)
+                        FormularioEdicion(
+                            uiState = uiState,
+                            onNombreCambia = onNombreCambia,
+                            onCedulaCambia = onCedulaCambia,
+                            onTelefonoCambia = onTelefonoCambia,
+                            onLicenciaCambia = onLicenciaCambia,
+                            onCancelar = onCancelarEdicion,
+                            onGuardar = onGuardar
+                        )
                     }
                     else -> {
                         VistaPerfil(
                             uiState = uiState,
-                            onEditar = viewModel::iniciarEdicion,
-                            onCerrarSesion = { mostrarDialogoCerrarSesion = true }
+                            onEditar = onEditar,
+                            onCerrarSesion = onCerrarSesion
                         )
                     }
                 }
             }
         }
-    }
-
-    if (mostrarDialogoCerrarSesion) {
-        AlertDialog(
-            onDismissRequest = { mostrarDialogoCerrarSesion = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            title = { Text("Cerrar sesión", style = MaterialTheme.typography.titleLarge) },
-            text = {
-                Text(
-                    text = "¿Seguro que quieres cerrar sesión?",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        mostrarDialogoCerrarSesion = false
-                        viewModel.cerrarSesion(onSesionCerrada)
-                    }
-                ) {
-                    Text("Cerrar sesión", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { mostrarDialogoCerrarSesion = false }) {
-                    Text("Cancelar", color = TransAndinaTheme.colores.textoSecundario)
-                }
-            }
-        )
     }
 }
 
@@ -146,7 +204,7 @@ private fun VistaPerfil(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Perfil actualizado correctamente",
+                text = stringResource(R.string.perfil_actualizado),
                 style = MaterialTheme.typography.bodyMedium,
                 color = TransAndinaTheme.colores.estadoOk
             )
@@ -154,20 +212,33 @@ private fun VistaPerfil(
         Spacer(modifier = Modifier.height(16.dp))
     }
 
-    // El Figma muestra los datos como etiqueta + valor separados por una
-    // línea fina, no como tarjetas (Figma `28:163`).
+    // El Figma muestra los datos como etiqueta navy + valor gris separados
+    // por una línea fina, no como tarjetas (Figma `28:163`).
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        DatoConLinea(etiqueta = "Nombre completo", valor = usuario.nombreCompleto)
-        DatoConLinea(etiqueta = "Cédula", valor = usuario.cedula)
-        DatoConLinea(etiqueta = "Correo", valor = usuario.email)
-        DatoConLinea(etiqueta = "Teléfono", valor = usuario.telefono ?: "Sin registrar")
+        DatoConLinea(
+            etiqueta = stringResource(R.string.nombre_completo),
+            valor = usuario.nombreCompleto
+        )
+        DatoConLinea(
+            etiqueta = stringResource(R.string.cedula),
+            valor = usuario.cedula
+        )
+        DatoConLinea(
+            etiqueta = stringResource(R.string.correo_electronico),
+            valor = usuario.email
+        )
+        DatoConLinea(
+            etiqueta = stringResource(R.string.telefono),
+            valor = usuario.telefono ?: stringResource(R.string.perfil_sin_registrar)
+        )
         if (usuario.rol == RolUsuario.conductor) {
             DatoConLinea(
-                etiqueta = "Licencia de conducir",
-                valor = usuario.licenciaConducir ?: "Sin registrar"
+                etiqueta = stringResource(R.string.perfil_licencia),
+                valor = usuario.licenciaConducir
+                    ?: stringResource(R.string.perfil_sin_registrar)
             )
         }
-        DatoConLinea(etiqueta = "Rol", valor = usuario.rol.name)
+        DatoConLinea(etiqueta = stringResource(R.string.perfil_rol), valor = usuario.rol.name)
     }
 
     Spacer(modifier = Modifier.height(32.dp))
@@ -177,12 +248,12 @@ private fun VistaPerfil(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         BotonPrimario(
-            texto = "Editar perfil",
+            texto = stringResource(R.string.perfil_editar_datos),
             onClick = onEditar,
             modifier = Modifier.weight(1f)
         )
         BotonDestructivo(
-            texto = "Cerrar sesión",
+            texto = stringResource(R.string.perfil_cerrar_sesion),
             onClick = onCerrarSesion,
             modifier = Modifier.weight(1f)
         )
@@ -192,98 +263,173 @@ private fun VistaPerfil(
 @Composable
 private fun DatoConLinea(etiqueta: String, valor: String) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        DatoEtiquetado(etiqueta = etiqueta, valor = valor)
+        DatoEtiquetado(
+            etiqueta = etiqueta,
+            valor = valor,
+            colorEtiqueta = MaterialTheme.colorScheme.onBackground,
+            colorValor = TransAndinaTheme.colores.grisBoton
+        )
         Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider(color = TransAndinaTheme.colores.placeholder)
+        HorizontalDivider(color = TransAndinaTheme.colores.textoSecundario)
     }
 }
 
 @Composable
-private fun FormularioEdicion(uiState: PerfilUiState, viewModel: PerfilViewModel) {
+private fun FormularioEdicion(
+    uiState: PerfilUiState,
+    onNombreCambia: (String) -> Unit,
+    onCedulaCambia: (String) -> Unit,
+    onTelefonoCambia: (String) -> Unit,
+    onLicenciaCambia: (String) -> Unit,
+    onCancelar: () -> Unit,
+    onGuardar: () -> Unit
+) {
     val usuario = uiState.usuario!!
+    val habilitado = !uiState.guardando
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         CampoTexto(
-            etiqueta = "Nombre completo",
+            etiqueta = stringResource(R.string.nombre_completo),
             valor = uiState.nombreCompleto,
-            onValorCambia = viewModel::onNombreChange,
-            forma = FormaPildora
+            onValorCambia = onNombreCambia,
+            variante = VarianteCampo.SUBRAYADO,
+            habilitado = habilitado
         )
         CampoTexto(
-            etiqueta = "Cédula",
+            etiqueta = stringResource(R.string.cedula),
             valor = uiState.cedula,
-            onValorCambia = viewModel::onCedulaChange,
-            forma = FormaPildora
+            onValorCambia = onCedulaCambia,
+            variante = VarianteCampo.SUBRAYADO,
+            tipoTeclado = KeyboardType.Number,
+            habilitado = habilitado
         )
         CampoTexto(
-            etiqueta = "Teléfono",
+            etiqueta = stringResource(R.string.telefono),
             valor = uiState.telefono,
-            onValorCambia = viewModel::onTelefonoChange,
-            forma = FormaPildora
+            onValorCambia = onTelefonoCambia,
+            variante = VarianteCampo.SUBRAYADO,
+            tipoTeclado = KeyboardType.Phone,
+            habilitado = habilitado
         )
 
         if (usuario.rol == RolUsuario.conductor) {
             CampoTexto(
-                etiqueta = "Licencia de conducir",
+                etiqueta = stringResource(R.string.perfil_licencia),
                 valor = uiState.licenciaConducir,
-                onValorCambia = viewModel::onLicenciaChange,
-                forma = FormaPildora
+                onValorCambia = onLicenciaCambia,
+                variante = VarianteCampo.SUBRAYADO,
+                habilitado = habilitado
             )
         }
 
-        DatoConLinea(etiqueta = "Correo (no editable)", valor = usuario.email)
-        DatoConLinea(etiqueta = "Rol (no editable)", valor = usuario.rol.name)
+        // El correo y el rol no se editan desde la app: el correo es la
+        // identidad en Supabase Auth y el rol lo controlan las políticas RLS.
+        DatoConLinea(
+            etiqueta = stringResource(R.string.perfil_correo_no_editable),
+            valor = usuario.email
+        )
+        DatoConLinea(
+            etiqueta = stringResource(R.string.perfil_rol_no_editable),
+            valor = usuario.rol.name
+        )
 
         uiState.error?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Start
+                color = MaterialTheme.colorScheme.error
             )
         }
     }
 
-    Spacer(modifier = Modifier.height(20.dp))
+    Spacer(modifier = Modifier.height(24.dp))
 
     FilaBotonesFormulario(
-        textoAccion = "Guardar",
-        onAccion = viewModel::guardarCambios,
-        onCancelar = viewModel::cancelarEdicion,
+        textoAccion = stringResource(R.string.guardar),
+        onAccion = onGuardar,
+        onCancelar = onCancelar,
+        textoCancelar = stringResource(R.string.cancelar),
         cargando = uiState.guardando
     )
 }
 
-@Preview(showBackground = true, heightDp = 800)
+private val usuarioDeMuestra = Usuario(
+    id = "1",
+    nombreCompleto = "Carlos Fernández Quesada",
+    cedula = "1-1111-1111",
+    email = "carlos@transandina.cr",
+    telefono = "8889-9900",
+    licenciaConducir = "B1-123456",
+    rol = RolUsuario.conductor
+)
+
 @Composable
-private fun PerfilScreenPreview() {
+private fun PerfilDePrueba(uiState: PerfilUiState) {
     TransAndinaFlotillaTheme {
-        Column(modifier = Modifier.fillMaxSize()) {
-            TransAndinaTopBar(titulo = "Perfil")
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(16.dp)
-            ) {
-                Column {
-                    VistaPerfil(
-                        uiState = PerfilUiState(
-                            usuario = Usuario(
-                                id = "1",
-                                nombreCompleto = "Carlos Fernández Quesada",
-                                cedula = "1-1111-1111",
-                                email = "carlos@transandina.cr",
-                                telefono = "8889-9900",
-                                licenciaConducir = "B1-123456",
-                                rol = RolUsuario.conductor
-                            )
-                        ),
-                        onEditar = {},
-                        onCerrarSesion = {}
-                    )
-                }
-            }
-        }
+        ContenidoPerfil(
+            uiState = uiState,
+            onEditar = {},
+            onCancelarEdicion = {},
+            onGuardar = {},
+            onNombreCambia = {},
+            onCedulaCambia = {},
+            onTelefonoCambia = {},
+            onLicenciaCambia = {},
+            onCerrarSesion = {}
+        )
     }
+}
+
+@Preview(name = "Perfil", showBackground = true, heightDp = 800)
+@Composable
+private fun PerfilPreview() {
+    PerfilDePrueba(PerfilUiState(usuario = usuarioDeMuestra))
+}
+
+@Preview(name = "Perfil editando", showBackground = true, heightDp = 800)
+@Composable
+private fun PerfilEditandoPreview() {
+    PerfilDePrueba(
+        PerfilUiState(
+            usuario = usuarioDeMuestra,
+            editando = true,
+            nombreCompleto = usuarioDeMuestra.nombreCompleto,
+            cedula = usuarioDeMuestra.cedula,
+            telefono = usuarioDeMuestra.telefono.orEmpty(),
+            licenciaConducir = usuarioDeMuestra.licenciaConducir.orEmpty()
+        )
+    )
+}
+
+@Preview(name = "Perfil guardando", showBackground = true, heightDp = 800)
+@Composable
+private fun PerfilGuardandoPreview() {
+    PerfilDePrueba(
+        PerfilUiState(
+            usuario = usuarioDeMuestra,
+            editando = true,
+            guardando = true,
+            nombreCompleto = usuarioDeMuestra.nombreCompleto,
+            cedula = usuarioDeMuestra.cedula,
+            telefono = usuarioDeMuestra.telefono.orEmpty()
+        )
+    )
+}
+
+@Preview(name = "Perfil cargando", showBackground = true, heightDp = 400)
+@Composable
+private fun PerfilCargandoPreview() {
+    PerfilDePrueba(PerfilUiState(cargando = true))
+}
+
+@Preview(name = "Perfil con error", showBackground = true, heightDp = 400)
+@Composable
+private fun PerfilErrorPreview() {
+    PerfilDePrueba(PerfilUiState(error = "No hay conexión con el servidor"))
+}
+
+@Preview(name = "Perfil guardado", showBackground = true, heightDp = 800)
+@Composable
+private fun PerfilGuardadoPreview() {
+    PerfilDePrueba(PerfilUiState(usuario = usuarioDeMuestra, guardadoExitoso = true))
 }
