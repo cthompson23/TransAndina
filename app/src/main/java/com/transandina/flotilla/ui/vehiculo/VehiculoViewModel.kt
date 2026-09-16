@@ -9,9 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-
-enum class EstadoDocumento { AL_DIA, PROXIMO, VENCIDO, SIN_DATO }
 
 data class VehiculoUiState(
     val vehiculo: Vehiculo? = null,
@@ -19,6 +16,7 @@ data class VehiculoUiState(
     val error: String? = null
 )
 
+/** Vehículo asignado al conductor con sesión iniciada; alimenta el hub. */
 class VehiculoViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
     private val vehiculoRepository: VehiculoRepository = VehiculoRepository()
@@ -44,25 +42,5 @@ class VehiculoViewModel(
                 }
             }
         }
-    }
-}
-
-/**
- * Calcula el estado de un documento (marchamo, revisión técnica, seguro)
- * comparando su fecha de vencimiento contra hoy. Vive fuera del ViewModel
- * porque es una función pura, fácil de reutilizar en Home y en el detalle.
- */
-fun calcularEstadoDocumento(fechaIso: String?): EstadoDocumento {
-    if (fechaIso == null) return EstadoDocumento.SIN_DATO
-    return try {
-        val fecha = LocalDate.parse(fechaIso)
-        val hoy = LocalDate.now()
-        when {
-            fecha.isBefore(hoy) -> EstadoDocumento.VENCIDO
-            fecha.isBefore(hoy.plusDays(15)) -> EstadoDocumento.PROXIMO
-            else -> EstadoDocumento.AL_DIA
-        }
-    } catch (e: Exception) {
-        EstadoDocumento.SIN_DATO
     }
 }
