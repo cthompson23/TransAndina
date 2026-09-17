@@ -200,6 +200,15 @@
     <string name="vehiculo_form_capacidad_marcador">Ingrese la capacidad</string>
     <string name="vehiculo_form_documentos">Vencimiento de documentos</string>
     <string name="vehiculo_form_documentos_ayuda">Opcional. Con estas fechas se calculan las alertas de documentos.</string>
+    <string name="vehiculo_form_estado">Estado del vehículo</string>
+    <string name="vehiculo_form_activo">Activo</string>
+    <string name="vehiculo_form_baja_ayuda">Al darlo de baja sale de la flotilla activa y deja de generar alertas, pero se conserva todo su historial.</string>
+    <string name="vehiculo_form_alta_ayuda">Este vehículo está dado de baja: no aparece como asignado ni genera alertas.</string>
+    <string name="vehiculo_form_dar_baja">Dar de baja</string>
+    <string name="vehiculo_form_reactivar">Reactivar vehículo</string>
+    <string name="vehiculo_form_baja_dialogo_titulo">¿Dar de baja el vehículo?</string>
+    <string name="vehiculo_form_baja_dialogo">%1$s saldrá de la flotilla activa. Puedes reactivarlo después.</string>
+    <string name="vehiculo_form_baja_dialogo_con_conductor">%1$s saldrá de la flotilla activa y quedará sin conductor asignado. Puedes reactivarlo después.</string>
 
     <!-- Registrar mantenimiento (Figma 49:161) -->
     <string name="mant_titulo">Registrar mantenimiento</string>
@@ -226,6 +235,8 @@
     <string name="mant_estimado_titulo">Próximo servicio estimado</string>
     <string name="mant_estimado_sin_frecuencia">Esta categoría no tiene una frecuencia definida</string>
     <string name="mant_guardado">Mantenimiento registrado correctamente</string>
+    <string name="mant_foto_evidencia">Foto de evidencia del mantenimiento</string>
+    <string name="cerrar">Cerrar</string>
     <string name="limpiar">Limpiar</string>
 
     <!-- Mis alertas: avisos guardados (Figma 28:312) -->
@@ -315,6 +326,8 @@
     <string name="reporte_sin_resultados">No hay mantenimientos con esos filtros</string>
     <string name="reporte_compartir">Compartir reporte</string>
     <string name="reporte_error_pdf">No se pudo generar el PDF</string>
+    <string name="reporte_guardar_descargas">Guardar en Descargas</string>
+    <string name="reporte_guardado">Guardado en Descargas: %1$s</string>
     <string name="reporte_pdf_titulo">Reporte de mantenimientos</string>
     <string name="reporte_pdf_pie">Generado el %1$s · página</string>
     <string name="reporte_col_fecha">Fecha</string>
