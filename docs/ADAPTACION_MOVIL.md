@@ -231,6 +231,7 @@ Así se pasa de 6 a 5 pestañas sin perder ninguna función.
 | Registrar / editar vehículo | `ui/flotilla/VehiculoFormularioScreen.kt` | `vehiculo-nuevo`, `vehiculo-editar/{id}` |
 | Detalle (vista encargado) | `ui/vehiculo/VehiculoDetalleScreen.kt` con `esEncargado = true` | `vehiculo-detalle/{id}/{pestaña}` |
 | Reasignación | `ui/flotilla/ReasignacionScreen.kt` | `reasignar/{id}` |
+| Registrar mantenimiento | `ui/mantenimiento/RegistrarMantenimientoScreen.kt` (botón en la pestaña Historial del detalle) | `registrar-mantenimiento/{id}` |
 | Alertas | `ui/alertas/AlertasFlotillaScreen.kt` | pestaña `alertas-flotilla` |
 | Enviar aviso de gerencia | `ui/alertas/EnviarAvisoScreen.kt` | `enviar-aviso` |
 | Reportes + PDF | `ui/reportes/ReportesScreen.kt`, `ExportadorPdfReporte.kt` | pestaña `reportes` |
@@ -262,20 +263,28 @@ Decisiones tomadas al implementar:
 - **Alertas del conductor (`28:312`)**: el título del Figma dice "Datos personales" por error; usar "Mis alertas".
 - **Registro (`1:370`)**: el selector de rol solo ofrece Conductor y Mecánico.
 - **RegistroMantenimiento (`49:161`)**: se agrega el campo obligatorio **"Kilometraje del servicio"**, que no está en el Figma y se precarga con el kilometraje actual del vehículo. La base lo exige (`mantenimientos.km`) y hace falta para estimar el próximo mantenimiento (decidido el 17/09/2026). Las categorías se leen de `frecuencias_mantenimiento` según el tipo de vehículo.
+  - Lo pueden registrar el **encargado** (sobre cualquier vehículo, decidido el 17/09/2026) y el conductor (sobre el suyo). La pantalla es la misma; por ahora solo está conectada para el encargado, desde la pestaña Historial del detalle.
+  - Campos además del Figma: **Taller** (obligatorio, es el "lugar") y **Descripción** (opcional). El **costo** es obligatorio, pero puede ser 0.
+  - El kilometraje del servicio no puede ser mayor al actual del vehículo, porque el encargado no puede registrar kilometraje.
+  - Debajo se muestra el **próximo servicio estimado** de la categoría elegida.
+  - **Fotos**: hasta 3, JPG o PNG. Antes de subirlas se reducen a 1600 px y se guardan como JPEG en el bucket `mantenimientos`, con la ruta `<vehiculo>/<mantenimiento>/<uuid>.jpg`. Si una foto falla, el mantenimiento igual queda guardado y se avisa. Todavía no hay pantalla para ver las fotos.
 - **DocumentosVehiculo (`87:135`)**: se muestra también "Permiso de carga" (`vehiculos.fecha_permiso_carga`).
 
 ---
 
 ## 8. Backend: qué existe y qué falta
 
-Verificado contra la base real el 17/09/2026. Migraciones en `supabase/migrations/`, todas **pendientes de aplicar**:
+Verificado contra la base real el 17/09/2026. Migraciones en `supabase/migrations/`:
 
 | Migración | Qué hace | Estado |
 |---|---|---|
 | `202609151900_crear_perfil_usuario_desde_auth.sql` | Trigger que crea el perfil al registrarse | **No aplicar todavía**: rompe el registro actual (ver la advertencia en el archivo) |
-| `202609152200_mantenimientos.sql` | Columna `taller` y bucket de fotos | Lista para revisar |
-| `202609171900_encargado.sql` | Estado de cuenta, bloqueo de cuentas no activas, permiso de carga, alertas de gerencia, reasignaciones, registrar administrador | Lista para revisar |
-| `202609171910_frecuencias_iniciales.sql` | Catálogo de categorías y frecuencias (la tabla estaba vacía) | Revisar los valores |
+| `202609152200_mantenimientos.sql` | Columna `taller` y bucket de fotos | Aplicada (17/09/2026) |
+| `202609171900_encargado.sql` | Estado de cuenta, bloqueo de cuentas no activas, permiso de carga, alertas de gerencia, reasignaciones, registrar administrador | Aplicada (17/09/2026) |
+| `202609171910_frecuencias_iniciales.sql` | Catálogo de categorías y frecuencias (la tabla estaba vacía) | Aplicada (17/09/2026) |
+| `202609172100_encargado_registra_mantenimientos.sql` | El encargado también puede registrar mantenimientos | **Pendiente**: aplicar para que el encargado pueda guardar |
+
+Datos de ejemplo (no son migraciones) en `supabase/datos_ejemplo/`: `mantenimientos_ejemplo.sql` inserta 8 mantenimientos por vehículo activo, y `borrar_mantenimientos_ejemplo.sql` los quita.
 
 Decisiones de modelo:
 
