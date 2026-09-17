@@ -353,6 +353,17 @@
     <string name="admin_confirmar_marcador">Repita la contraseña</string>
     <string name="admin_rol">Rol asignado</string>
 
+    <!-- Accesibilidad: descripción de los íconos de la barra inferior -->
+    <string name="nav_inicio">Inicio</string>
+    <string name="nav_vehiculo">Mi vehículo</string>
+    <string name="nav_mantenimiento">Mantenimiento</string>
+    <string name="nav_notificaciones">Alertas</string>
+    <string name="nav_perfil">Perfil</string>
+    <string name="nav_flotilla">Flotilla</string>
+    <string name="nav_alertas">Alertas de la flotilla</string>
+    <string name="nav_reportes">Reportes</string>
+    <string name="nav_usuarios">Usuarios</string>
+
     <!-- Accesibilidad -->
     <string name="mostrar_contrasena">Mostrar contraseña</string>
     <string name="ocultar_contrasena">Ocultar contraseña</string>

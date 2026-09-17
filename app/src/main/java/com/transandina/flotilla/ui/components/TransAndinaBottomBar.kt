@@ -8,6 +8,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.transandina.flotilla.data.model.RolUsuario
@@ -38,9 +39,9 @@ fun TransAndinaBottomBar(
                 icon = {
                     Icon(
                         imageVector = item.icono,
-                        // Hoy los ítems no tienen etiqueta; queda pendiente
-                        // darles una descripción para lectores de pantalla.
-                        contentDescription = item.etiqueta.ifBlank { null }
+                        // No se dibuja texto (Figma `1:1225`), pero el lector de
+                        // pantalla necesita saber qué es cada ícono.
+                        contentDescription = stringResource(item.etiqueta)
                     )
                 },
                 label = null,
