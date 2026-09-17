@@ -53,7 +53,8 @@ data class ColoresTransAndina(
     val estadoOk: Color,
     val estadoAviso: Color,
     val estadoCritico: Color,
-    val estadoInfo: Color
+    val estadoInfo: Color,
+    val estadoNeutro: Color
 )
 
 private val ColoresClaros = ColoresTransAndina(
@@ -68,7 +69,8 @@ private val ColoresClaros = ColoresTransAndina(
     estadoOk = EstadoOk,
     estadoAviso = EstadoAviso,
     estadoCritico = EstadoCritico,
-    estadoInfo = EstadoInfo
+    estadoInfo = EstadoInfo,
+    estadoNeutro = EstadoNeutro
 )
 
 private val LocalColoresTransAndina = staticCompositionLocalOf { ColoresClaros }

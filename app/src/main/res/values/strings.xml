@@ -91,7 +91,7 @@
     <string name="vehiculo_opcion_kilometraje">Kilometraje</string>
     <string name="vehiculo_opcion_kilometraje_detalle">Histórico y próximo mantenimiento</string>
     <string name="vehiculo_opcion_documentos">Documentos</string>
-    <string name="vehiculo_opcion_documentos_detalle">Marchamo, revisión técnica y seguro</string>
+    <string name="vehiculo_opcion_documentos_detalle">Marchamo, revisión técnica, seguro y permiso de carga</string>
 
     <!-- Detalle del vehículo (Figma 28:418, 51:125, 51:217, 87:135) -->
     <string name="detalle_pestana_informacion">Información</string>
@@ -143,6 +143,190 @@
     <string name="alertas_titulo">Mis alertas</string>
     <string name="alertas_vacio">No hay alertas por ahora</string>
     <string name="alertas_vacio_detalle">Aquí aparecerán las alertas y notificaciones relacionadas con tu vehículo.</string>
+
+    <!-- Comunes del encargado -->
+    <string name="registrar">Registrar</string>
+    <string name="guardar_cambios">Guardar cambios</string>
+    <string name="filtro_todos">Todos</string>
+    <string name="filtro_todas">Todas</string>
+    <string name="sin_conductor">Sin conductor</string>
+    <string name="rol_encargado">Encargado de flota</string>
+    <string name="busqueda_borrar">Borrar búsqueda</string>
+    <string name="mantenimiento_preventivo">Preventivo</string>
+    <string name="mantenimiento_correctivo">Correctivo</string>
+    <string name="mantenimiento_sin_costo">Sin costo</string>
+    <string name="tipo_vehiculo_liviano">Liviano</string>
+    <string name="tipo_vehiculo_pesado">Pesado</string>
+    <string name="tipo_vehiculo_especial">Especial</string>
+
+    <!-- Estado de flotilla (Figma 102:158) -->
+    <string name="flotilla_titulo">Estado de flotilla</string>
+    <string name="flotilla_kpi_activos">Activos</string>
+    <string name="flotilla_kpi_mantenimientos">Mant. pendientes</string>
+    <string name="flotilla_kpi_documentos">Docs. por vencer</string>
+    <string name="flotilla_buscar">Placa, vehículo o conductor</string>
+    <string name="flotilla_vehiculo_conductor">%1$s · %2$s</string>
+    <string name="flotilla_ultimo_mantenimiento">Últ. mant. %1$s · %2$s</string>
+    <string name="flotilla_sin_mantenimientos">Sin mantenimientos · %1$s</string>
+    <string name="flotilla_inactivo">Inactivo</string>
+    <string name="flotilla_vacia">Todavía no hay vehículos registrados</string>
+    <string name="flotilla_sin_coincidencias">Ningún vehículo coincide con la búsqueda</string>
+    <string name="flotilla_registrar_vehiculo">Registrar vehículo</string>
+
+    <!-- Detalle del vehículo, vista del encargado (Figma 102:178) -->
+    <string name="detalle_titulo_encargado">Detalle del vehículo</string>
+    <string name="detalle_conductor_asignado">Conductor asignado</string>
+    <string name="detalle_conductor_no_disponible">No disponible</string>
+    <string name="detalle_reasignar_conductor">Reasignar conductor</string>
+    <string name="detalle_asignar_conductor">Asignar conductor</string>
+    <string name="detalle_editar_vehiculo">Editar vehículo</string>
+    <string name="documentos_permiso_carga">Permiso de carga</string>
+    <string name="documentos_editar">Editar fechas de documentos</string>
+    <string name="kilometraje_proximo_titulo">Próximo mantenimiento preventivo</string>
+    <string name="kilometraje_proximo_sin_datos">Se estima cuando haya al menos un mantenimiento registrado de cada categoría.</string>
+    <string name="kilometraje_proximo_km_o_fecha">A los %1$s o el %2$s, lo que ocurra primero</string>
+    <string name="kilometraje_proximo_km">A los %1$s</string>
+    <string name="kilometraje_proximo_fecha">El %1$s</string>
+
+    <!-- Registrar / editar vehículo (Figma 49:118) -->
+    <string name="vehiculo_form_titulo_nuevo">Registrar vehículo</string>
+    <string name="vehiculo_form_titulo_editar">Editar vehículo</string>
+    <string name="vehiculo_form_placa_marcador">Ingrese la placa</string>
+    <string name="vehiculo_form_tipo_marcador">Seleccione el tipo</string>
+    <string name="vehiculo_form_anio_marcador">Ingrese el año</string>
+    <string name="vehiculo_form_marca_marcador">Ingrese la marca</string>
+    <string name="vehiculo_form_modelo_marcador">Ingrese el modelo</string>
+    <string name="vehiculo_form_capacidad">Capacidad (toneladas)</string>
+    <string name="vehiculo_form_capacidad_marcador">Ingrese la capacidad</string>
+    <string name="vehiculo_form_documentos">Vencimiento de documentos</string>
+    <string name="vehiculo_form_documentos_ayuda">Opcional. Con estas fechas se calculan las alertas de documentos.</string>
+
+    <!-- Reasignación de conductor (Figma 102:318) -->
+    <string name="reasignar_titulo">Reasignar conductor</string>
+    <string name="reasignar_aviso">El conductor anterior pierde el acceso al vehículo y ambos reciben una notificación.</string>
+    <string name="reasignar_conductor_actual">Conductor actual</string>
+    <string name="reasignar_nuevo">Nuevo conductor</string>
+    <string name="reasignar_nuevo_marcador">Seleccione un conductor disponible</string>
+    <string name="reasignar_quitar">Dejar sin conductor</string>
+    <string name="reasignar_sin_disponibles">No hay conductores activos sin vehículo asignado.</string>
+    <string name="reasignar_fecha">Fecha efectiva</string>
+    <string name="reasignar_motivo">Motivo de la reasignación</string>
+    <string name="reasignar_motivo_marcador">Ingrese el motivo del cambio</string>
+    <string name="reasignar_confirmar">Confirmar</string>
+    <string name="reasignar_dialogo_titulo">¿Confirmar la reasignación?</string>
+    <string name="reasignar_dialogo_mensaje">%1$s quedará asignado a %2$s de inmediato.</string>
+    <string name="reasignar_dialogo_quitar">%1$s quedará sin conductor asignado.</string>
+    <string name="reasignar_dialogo_confirmar">Reasignar</string>
+    <string name="reasignar_recientes">Reasignaciones recientes</string>
+    <string name="reasignar_recientes_vacio">Este vehículo no ha tenido reasignaciones.</string>
+
+    <!-- Alertas de la flotilla (Figma 102:238) -->
+    <string name="alertas_flotilla_titulo">Alertas de la flotilla</string>
+    <string name="alertas_flotilla_vacio">No hay alertas con este filtro</string>
+    <string name="alertas_filtro_criticas">Críticas</string>
+    <string name="alertas_filtro_proximas">Próximas</string>
+    <string name="alertas_filtro_informativas">Informativas</string>
+    <string name="alerta_nivel_critica">Crítica</string>
+    <string name="alerta_nivel_proxima">Próxima</string>
+    <string name="alerta_nivel_informativa">Informativa</string>
+    <string name="alerta_vencido_marchamo">Marchamo vencido</string>
+    <string name="alerta_vencido_revision">Revisión técnica vencida</string>
+    <string name="alerta_vencido_seguro">Póliza INS vencida</string>
+    <string name="alerta_vencido_permiso">Permiso de carga vencido</string>
+    <string name="alerta_por_vencer_marchamo">Marchamo próximo a vencer</string>
+    <string name="alerta_por_vencer_revision">Revisión técnica próxima a vencer</string>
+    <string name="alerta_por_vencer_seguro">Póliza INS próxima a vencer</string>
+    <string name="alerta_por_vencer_permiso">Permiso de carga próximo a vencer</string>
+    <string name="alerta_mantenimiento_atrasado">Mantenimiento atrasado</string>
+    <string name="alerta_mantenimiento_proximo">Mantenimiento preventivo próximo</string>
+    <string name="alerta_reasignacion">Reasignación de conductor</string>
+    <string name="alerta_detalle_vencio">%1$s · %2$s · venció el %3$s</string>
+    <string name="alerta_detalle_vence">%1$s · %2$s · vence el %3$s</string>
+    <string name="alerta_detalle_atrasado_fecha">%1$s · %2$s pendiente desde el %3$s</string>
+    <string name="alerta_detalle_atrasado_km">%1$s · %2$s · se pasó por %3$s</string>
+    <string name="alerta_detalle_proximo_km">%1$s · %2$s · faltan %3$s</string>
+    <string name="alerta_detalle_proximo_fecha">%1$s · %2$s · toca el %3$s</string>
+    <string name="alerta_detalle_reasignado">%1$s · asignado a %2$s el %3$s</string>
+    <string name="alerta_detalle_sin_conductor">%1$s · quedó sin conductor el %2$s</string>
+
+    <!-- Aviso de gerencia -->
+    <string name="aviso_boton">Enviar aviso</string>
+    <string name="aviso_titulo">Enviar aviso</string>
+    <string name="aviso_ayuda">El aviso aparece en las alertas de cada destinatario como un mensaje de la gerencia.</string>
+    <string name="aviso_destino">Destinatarios</string>
+    <string name="aviso_destino_marcador">Elija a quién va el aviso</string>
+    <string name="aviso_todos_conductores">Todos los conductores activos</string>
+    <string name="aviso_todos_usuarios">Todas las cuentas activas</string>
+    <string name="aviso_mensaje">Mensaje</string>
+    <string name="aviso_mensaje_marcador">Escriba el aviso</string>
+    <string name="aviso_enviar">Enviar</string>
+
+    <!-- Reportes (Figma 102:198 y 102:218) -->
+    <string name="reporte_titulo">Generación de reportes</string>
+    <string name="reporte_filtros">Filtros del reporte</string>
+    <string name="reporte_tipo">Tipo de mantenimiento</string>
+    <string name="reporte_taller">Taller</string>
+    <string name="reporte_desde">Fecha inicial</string>
+    <string name="reporte_hasta">Fecha final</string>
+    <string name="reporte_todos_vehiculos">Todos los vehículos</string>
+    <string name="reporte_ambos_tipos">Preventivo y correctivo</string>
+    <string name="reporte_todos_talleres">Todos los talleres</string>
+    <string name="reporte_limpiar">Limpiar filtros</string>
+    <string name="reporte_generar">Generar reporte</string>
+    <string name="reporte_ayuda">Configure los filtros y presione Generar reporte para ver los resultados.</string>
+    <string name="reporte_generado_titulo">Reporte generado</string>
+    <string name="reporte_rango">%1$s al %2$s</string>
+    <string name="reporte_cantidad">Mantenimientos: %1$d</string>
+    <string name="reporte_costo_total">Costo total %1$s</string>
+    <string name="reporte_modificar">Modificar filtros</string>
+    <string name="reporte_exportar">Exportar PDF</string>
+    <string name="reporte_sin_resultados">No hay mantenimientos con esos filtros</string>
+    <string name="reporte_compartir">Compartir reporte</string>
+    <string name="reporte_error_pdf">No se pudo generar el PDF</string>
+    <string name="reporte_pdf_titulo">Reporte de mantenimientos</string>
+    <string name="reporte_pdf_pie">Generado el %1$s · página</string>
+    <string name="reporte_col_fecha">Fecha</string>
+    <string name="reporte_col_categoria">Categoría</string>
+    <string name="reporte_col_responsable">Responsable</string>
+    <string name="reporte_col_costo">Costo</string>
+
+    <!-- Usuarios (Figma 102:258) -->
+    <string name="usuarios_titulo">Consulta de usuarios</string>
+    <string name="usuarios_buscar">Nombre, cédula o correo</string>
+    <string name="usuarios_filtro_conductores">Conductores</string>
+    <string name="usuarios_filtro_mecanicos">Mecánicos</string>
+    <string name="usuarios_filtro_encargados">Encargados</string>
+    <string name="usuarios_sin_coincidencias">Ninguna cuenta coincide con la búsqueda</string>
+    <string name="usuarios_registrar_admin">Registrar administrador</string>
+    <string name="usuarios_tu">%1$s (tú)</string>
+    <string name="cuenta_activo">Activo</string>
+    <string name="cuenta_suspendido">Suspendido</string>
+    <string name="cuenta_desactivado">Desactivado</string>
+
+    <!-- Estado de la cuenta (Figma 102:298) -->
+    <string name="estado_cuenta_titulo">Estado de la cuenta</string>
+    <string name="estado_cuenta_actual">Estado actual</string>
+    <string name="estado_cuenta_no_encontrada">No encontramos esa cuenta</string>
+    <string name="estado_cuenta_cambiar">Cambiar estado de la cuenta</string>
+    <string name="estado_cuenta_ayuda">El cambio se aplica de inmediato.</string>
+    <string name="estado_cuenta_propia">No puedes cambiar el estado de tu propia cuenta.</string>
+    <string name="estado_cuenta_desactivada_final">Esta cuenta está desactivada de forma permanente y no se puede reactivar.</string>
+    <string name="estado_cuenta_activo_detalle">La cuenta puede iniciar sesión y registrar información con normalidad.</string>
+    <string name="estado_cuenta_suspendido_detalle">Acceso bloqueado temporalmente. Los datos históricos se conservan.</string>
+    <string name="estado_cuenta_desactivado_detalle">La cuenta se cierra de forma permanente y se libera el vehículo asignado.</string>
+    <string name="estado_cuenta_dialogo_titulo">¿Desactivar la cuenta?</string>
+    <string name="estado_cuenta_dialogo_mensaje">La cuenta de %1$s se cerrará de forma permanente y su vehículo quedará sin conductor. Esta acción no se puede deshacer.</string>
+    <string name="estado_cuenta_dialogo_confirmar">Desactivar</string>
+
+    <!-- Registro de administrador (Figma 102:278) -->
+    <string name="admin_titulo">Registrar administrador</string>
+    <string name="admin_subtitulo">Datos del encargado de flota</string>
+    <string name="admin_ayuda">La cuenta tendrá acceso completo a la gestión de la flotilla.</string>
+    <string name="admin_nombre_marcador">Ingrese el nombre completo</string>
+    <string name="admin_correo_marcador">Ingrese el correo institucional</string>
+    <string name="admin_contrasena_marcador">Ingrese una contraseña</string>
+    <string name="admin_confirmar_marcador">Repita la contraseña</string>
+    <string name="admin_rol">Rol asignado</string>
 
     <!-- Accesibilidad -->
     <string name="mostrar_contrasena">Mostrar contraseña</string>
