@@ -32,6 +32,7 @@ fun TarjetaAlerta(
     textoNivel: String,
     nivel: NivelEstado,
     modifier: Modifier = Modifier,
+    fecha: String? = null,
     onClick: (() -> Unit)? = null
 ) {
     TarjetaTransAndina(modifier = modifier, onClick = onClick, relleno = 12.dp) {
@@ -62,6 +63,14 @@ fun TarjetaAlerta(
                     style = MaterialTheme.typography.bodySmall,
                     color = TransAndinaTheme.colores.textoSecundario
                 )
+                // Los avisos guardados llevan la fecha en que llegaron (Figma `28:312`).
+                if (fecha != null) {
+                    Text(
+                        text = fecha,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TransAndinaTheme.colores.placeholder
+                    )
+                }
             }
             ChipEstado(texto = textoNivel, nivel = nivel)
         }
