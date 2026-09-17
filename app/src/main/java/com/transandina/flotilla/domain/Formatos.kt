@@ -16,8 +16,51 @@ private val FORMATO_ISO: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
  * Se redondea a entero porque `km_actual` es numeric pero siempre se captura
  * sin decimales.
  */
-fun formatearKilometros(km: Double): String {
-    val entero = km.roundToLong()
+fun formatearKilometros(km: Double): String = agruparMiles(km)
+
+/** Igual que [formatearKilometros] pero con la unidad: "492 400 km". */
+fun formatearKilometrosConUnidad(km: Double): String = "${formatearKilometros(km)} km"
+
+/** Montos en colones sin decimales, como en el Figma: "₡ 45 000". */
+fun formatearColones(monto: Double): String = "₡ ${agruparMiles(monto)}"
+
+/**
+ * Lee un monto escrito a mano: "₡ 45 000", "45000,50", "45.000" o "1.234,5".
+ * La coma es decimal (costumbre en Costa Rica); un punto seguido de tres
+ * dígitos se toma como separador de miles. Devuelve null si no es un número
+ * o es negativo.
+ */
+fun interpretarMonto(texto: String): Double? {
+    val limpio = texto.filterNot { it.isWhitespace() || it == '₡' }
+    if (limpio.isEmpty()) return null
+
+    val normalizado = when {
+        ',' in limpio && '.' in limpio ->
+            if (limpio.lastIndexOf(',') > limpio.lastIndexOf('.')) {
+                limpio.replace(".", "").replace(',', '.')
+            } else {
+                limpio.replace(",", "")
+            }
+        ',' in limpio ->
+            if (limpio.count { it == ',' } == 1) limpio.replace(',', '.') else limpio.replace(",", "")
+        '.' in limpio ->
+            if (limpio.count { it == '.' } > 1 || limpio.substringAfterLast('.').length == 3) {
+                limpio.replace(".", "")
+            } else {
+                limpio
+            }
+        else -> limpio
+    }
+    return normalizado.toDoubleOrNull()?.takeIf { it >= 0 }
+}
+
+/** Kilómetros escritos a mano ("492 400", "492.400"): solo cuentan los dígitos. */
+fun interpretarKilometros(texto: String): Double? =
+    texto.filter(Char::isDigit).takeIf { it.isNotEmpty() }?.toDoubleOrNull()
+
+/** Redondea a entero y separa los miles con un espacio: 492400.0 → "492 400". */
+private fun agruparMiles(valor: Double): String {
+    val entero = valor.roundToLong()
     val signo = if (entero < 0) "-" else ""
     val digitos = abs(entero).toString()
 
@@ -29,9 +72,6 @@ fun formatearKilometros(km: Double): String {
 
     return signo + conSeparador
 }
-
-/** Igual que [formatearKilometros] pero con la unidad: "492 400 km". */
-fun formatearKilometrosConUnidad(km: Double): String = "${formatearKilometros(km)} km"
 
 /**
  * Pasa una fecha ISO de Supabase al formato de pantalla: "2026-08-25" →

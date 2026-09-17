@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.transandina.flotilla.ui.theme.ALFA_FONDO_ESTADO
@@ -28,7 +29,23 @@ enum class NivelEstado {
     CRITICO,
 
     /** "Informativa". */
-    INFO
+    INFO,
+
+    /** "Desactivado": ya no hay nada que atender. */
+    NEUTRO
+}
+
+/** Color pleno de cada nivel; el fondo del chip es este mismo con transparencia. */
+@Composable
+fun colorDeNivel(nivel: NivelEstado): Color {
+    val colores = TransAndinaTheme.colores
+    return when (nivel) {
+        NivelEstado.OK -> colores.estadoOk
+        NivelEstado.AVISO -> colores.estadoAviso
+        NivelEstado.CRITICO -> colores.estadoCritico
+        NivelEstado.INFO -> colores.estadoInfo
+        NivelEstado.NEUTRO -> colores.estadoNeutro
+    }
 }
 
 /**
@@ -41,13 +58,7 @@ fun ChipEstado(
     nivel: NivelEstado,
     modifier: Modifier = Modifier
 ) {
-    val colores = TransAndinaTheme.colores
-    val color = when (nivel) {
-        NivelEstado.OK -> colores.estadoOk
-        NivelEstado.AVISO -> colores.estadoAviso
-        NivelEstado.CRITICO -> colores.estadoCritico
-        NivelEstado.INFO -> colores.estadoInfo
-    }
+    val color = colorDeNivel(nivel)
     val alfaFondo = if (nivel == NivelEstado.INFO) {
         ALFA_FONDO_ESTADO_INFO
     } else {

@@ -13,11 +13,13 @@ enum class EstadoDocumento { AL_DIA, PROXIMO, VENCIDO, SIN_DATO }
  * Las fechas llegan de Supabase como `date` en ISO (yyyy-MM-dd); cualquier
  * cosa que no se pueda interpretar cuenta como "sin dato".
  */
-fun calcularEstadoDocumento(fechaIso: String?): EstadoDocumento {
+fun calcularEstadoDocumento(
+    fechaIso: String?,
+    hoy: LocalDate = LocalDate.now()
+): EstadoDocumento {
     if (fechaIso == null) return EstadoDocumento.SIN_DATO
     return try {
         val fecha = LocalDate.parse(fechaIso)
-        val hoy = LocalDate.now()
         when {
             fecha.isBefore(hoy) -> EstadoDocumento.VENCIDO
             fecha.isBefore(hoy.plusDays(15)) -> EstadoDocumento.PROXIMO

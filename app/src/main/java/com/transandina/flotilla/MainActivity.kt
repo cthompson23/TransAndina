@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -30,20 +31,25 @@ import com.transandina.flotilla.ui.auth.LoginScreen
 import com.transandina.flotilla.ui.auth.NuevaContrasenaScreen
 import com.transandina.flotilla.ui.auth.RecuperarContrasenaScreen
 import com.transandina.flotilla.ui.auth.RegistroScreen
+import com.transandina.flotilla.ui.alertas.AlertasFlotillaScreen
+import com.transandina.flotilla.ui.alertas.EnviarAvisoScreen
 import com.transandina.flotilla.ui.components.TransAndinaBottomBar
-import com.transandina.flotilla.ui.encargado.EstadoScreen
-import com.transandina.flotilla.ui.encargado.HistorialScreen
-import com.transandina.flotilla.ui.encargado.ReasignacionScreen
-import com.transandina.flotilla.ui.encargado.ReportesScreen
-import com.transandina.flotilla.ui.encargado.UsuariosScreen
+import com.transandina.flotilla.ui.flotilla.FlotillaScreen
+import com.transandina.flotilla.ui.flotilla.ReasignacionScreen
+import com.transandina.flotilla.ui.flotilla.VehiculoFormularioScreen
 import com.transandina.flotilla.ui.home.HomeScreen
 import com.transandina.flotilla.ui.mantenimiento.MantenimientoScreen
+import com.transandina.flotilla.ui.mantenimiento.RegistrarMantenimientoScreen
 import com.transandina.flotilla.ui.navigation.BottomNavItem
 import com.transandina.flotilla.ui.navigation.itemsParaRol
 import com.transandina.flotilla.ui.notificaciones.NotificacionesScreen
 import com.transandina.flotilla.ui.perfil.PerfilScreen
+import com.transandina.flotilla.ui.reportes.ReportesScreen
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
 import com.transandina.flotilla.ui.kilometraje.KilometrajeScreen
+import com.transandina.flotilla.ui.usuarios.EstadoCuentaScreen
+import com.transandina.flotilla.ui.usuarios.RegistrarAdministradorScreen
+import com.transandina.flotilla.ui.usuarios.UsuariosScreen
 import com.transandina.flotilla.ui.vehiculo.PestanaVehiculo
 import com.transandina.flotilla.ui.vehiculo.VehiculoDetalleScreen
 import com.transandina.flotilla.ui.vehiculo.VehiculoHubScreen
@@ -58,14 +64,42 @@ private const val ARG_PESTANA = "pestana"
 private const val RUTA_VEHICULO_DETALLE = "vehiculo-detalle/{$ARG_VEHICULO_ID}/{$ARG_PESTANA}"
 private const val RUTA_REGISTRAR_KILOMETRAJE = "registrar-kilometraje/{$ARG_VEHICULO_ID}"
 
-/** Avisa al detalle del vehículo que vuelva a leer los datos tras guardar. */
-private const val CLAVE_KM_REGISTRADO = "km_registrado"
+// Rutas del encargado que no son pestañas (docs/ADAPTACION_MOVIL.md §5).
+private const val ARG_USUARIO_ID = "usuarioId"
+private const val RUTA_REASIGNAR = "reasignar/{$ARG_VEHICULO_ID}"
+private const val RUTA_REGISTRAR_MANTENIMIENTO = "registrar-mantenimiento/{$ARG_VEHICULO_ID}"
+private const val RUTA_VEHICULO_NUEVO = "vehiculo-nuevo"
+private const val RUTA_VEHICULO_EDITAR = "vehiculo-editar/{$ARG_VEHICULO_ID}"
+private const val RUTA_ESTADO_CUENTA = "estado-cuenta/{$ARG_USUARIO_ID}"
+private const val RUTA_REGISTRAR_ADMIN = "registrar-administrador"
+private const val RUTA_ENVIAR_AVISO = "enviar-aviso"
+
+/**
+ * Avisa a la pantalla anterior (el detalle del vehículo) que vuelva a leer los
+ * datos, porque se guardó algo: kilometraje, reasignación o edición.
+ */
+private const val CLAVE_RECARGAR = "recargar"
 
 private fun rutaVehiculoDetalle(vehiculoId: String, pestana: PestanaVehiculo) =
     "vehiculo-detalle/$vehiculoId/${pestana.name}"
 
 private fun rutaRegistrarKilometraje(vehiculoId: String) =
     "registrar-kilometraje/$vehiculoId"
+
+private fun rutaReasignar(vehiculoId: String) = "reasignar/$vehiculoId"
+
+private fun rutaRegistrarMantenimiento(vehiculoId: String) = "registrar-mantenimiento/$vehiculoId"
+
+private fun rutaVehiculoEditar(vehiculoId: String) = "vehiculo-editar/$vehiculoId"
+
+private fun rutaEstadoCuenta(usuarioId: String) = "estado-cuenta/$usuarioId"
+
+/** Sube el contador [CLAVE_RECARGAR] de la pantalla anterior y vuelve a ella. */
+private fun NavHostController.volverYRecargar() {
+    val anterior = previousBackStackEntry?.savedStateHandle
+    anterior?.set(CLAVE_RECARGAR, (anterior.get<Int>(CLAVE_RECARGAR) ?: 0) + 1)
+    popBackStack()
+}
 
 private val RUTAS_SIN_BARRA_INFERIOR = setOf(
     RUTA_LOGIN, RUTA_REGISTRO, RUTA_RECUPERAR_CONTRASENA, RUTA_NUEVA_CONTRASENA
@@ -238,34 +272,35 @@ private fun AppNavigation(
                 val pestana = entrada.arguments?.getString(ARG_PESTANA)
                     ?.let { runCatching { PestanaVehiculo.valueOf(it) }.getOrNull() }
                     ?: PestanaVehiculo.INFORMACION
-                // Cada vez que se guarda un kilometraje, este contador cambia y
-                // el detalle vuelve a leer el vehículo con el km ya actualizado.
+                // Cada vez que se guarda algo en una pantalla hija, este contador
+                // cambia y el detalle vuelve a leer el vehículo actualizado.
                 val tokenRecarga by entrada.savedStateHandle
-                    .getStateFlow(CLAVE_KM_REGISTRADO, 0)
+                    .getStateFlow(CLAVE_RECARGAR, 0)
                     .collectAsState()
 
                 VehiculoDetalleScreen(
                     vehiculoId = vehiculoId,
                     pestanaInicial = pestana,
                     tokenRecarga = tokenRecarga,
+                    esEncargado = rolActual == RolUsuario.encargado,
+                    // El mecánico no registra kilometraje (migración 202609172200).
+                    puedeRegistrarKilometraje = rolActual != RolUsuario.mecanico,
                     onAtras = { navController.popBackStack() },
                     onRegistrarKilometraje = { id ->
                         navController.navigate(rutaRegistrarKilometraje(id))
-                    }
+                    },
+                    onRegistrarMantenimiento = { id ->
+                        navController.navigate(rutaRegistrarMantenimiento(id))
+                    },
+                    onReasignarConductor = { id -> navController.navigate(rutaReasignar(id)) },
+                    onEditarVehiculo = { id -> navController.navigate(rutaVehiculoEditar(id)) }
                 )
             }
             composable(RUTA_REGISTRAR_KILOMETRAJE) { entrada ->
                 KilometrajeScreen(
                     vehiculoId = entrada.arguments?.getString(ARG_VEHICULO_ID),
                     onAtras = { navController.popBackStack() },
-                    onRegistroExitoso = {
-                        val anterior = navController.previousBackStackEntry?.savedStateHandle
-                        anterior?.set(
-                            CLAVE_KM_REGISTRADO,
-                            (anterior.get<Int>(CLAVE_KM_REGISTRADO) ?: 0) + 1
-                        )
-                        navController.popBackStack()
-                    }
+                    onRegistroExitoso = { navController.volverYRecargar() }
                 )
             }
             composable(BottomNavItem.Mantenimiento.ruta) { MantenimientoScreen() }
@@ -282,11 +317,84 @@ private fun AppNavigation(
             }
 
             // Exclusivas del encargado de flota
-            composable(BottomNavItem.Estado.ruta) { EstadoScreen() }
-            composable(BottomNavItem.Historial.ruta) { HistorialScreen() }
+            composable(BottomNavItem.Estado.ruta) {
+                FlotillaScreen(
+                    onAbrirVehiculo = { id ->
+                        navController.navigate(rutaVehiculoDetalle(id, PestanaVehiculo.INFORMACION))
+                    },
+                    onRegistrarVehiculo = { navController.navigate(RUTA_VEHICULO_NUEVO) }
+                )
+            }
+            composable(BottomNavItem.AlertasFlotilla.ruta) {
+                AlertasFlotillaScreen(
+                    onAbrirVehiculo = { id ->
+                        navController.navigate(rutaVehiculoDetalle(id, PestanaVehiculo.INFORMACION))
+                    },
+                    onEnviarAviso = { navController.navigate(RUTA_ENVIAR_AVISO) }
+                )
+            }
             composable(BottomNavItem.Reportes.ruta) { ReportesScreen() }
-            composable(BottomNavItem.Usuarios.ruta) { UsuariosScreen() }
-            composable(BottomNavItem.Reasignacion.ruta) { ReasignacionScreen() }
+            composable(BottomNavItem.Usuarios.ruta) {
+                UsuariosScreen(
+                    onAbrirUsuario = { id -> navController.navigate(rutaEstadoCuenta(id)) },
+                    onRegistrarAdministrador = { navController.navigate(RUTA_REGISTRAR_ADMIN) }
+                )
+            }
+            composable(RUTA_REASIGNAR) { entrada ->
+                ReasignacionScreen(
+                    vehiculoId = entrada.arguments?.getString(ARG_VEHICULO_ID).orEmpty(),
+                    onAtras = { navController.popBackStack() },
+                    onReasignado = { navController.volverYRecargar() }
+                )
+            }
+            composable(RUTA_REGISTRAR_MANTENIMIENTO) { entrada ->
+                // Si se registra el kilometraje desde aquí, al volver hay que
+                // releer el vehículo para que acepte la nueva lectura.
+                val tokenRecarga by entrada.savedStateHandle
+                    .getStateFlow(CLAVE_RECARGAR, 0)
+                    .collectAsState()
+
+                RegistrarMantenimientoScreen(
+                    vehiculoId = entrada.arguments?.getString(ARG_VEHICULO_ID).orEmpty(),
+                    tokenRecarga = tokenRecarga,
+                    onAtras = { navController.popBackStack() },
+                    onRegistrarKilometraje = { id ->
+                        navController.navigate(rutaRegistrarKilometraje(id))
+                    },
+                    onGuardado = { navController.volverYRecargar() }
+                )
+            }
+            composable(RUTA_VEHICULO_NUEVO) {
+                VehiculoFormularioScreen(
+                    onAtras = { navController.popBackStack() },
+                    onGuardado = { navController.popBackStack() }
+                )
+            }
+            composable(RUTA_VEHICULO_EDITAR) { entrada ->
+                VehiculoFormularioScreen(
+                    vehiculoId = entrada.arguments?.getString(ARG_VEHICULO_ID),
+                    onAtras = { navController.popBackStack() },
+                    onGuardado = { navController.volverYRecargar() }
+                )
+            }
+            composable(RUTA_ESTADO_CUENTA) { entrada ->
+                EstadoCuentaScreen(
+                    usuarioId = entrada.arguments?.getString(ARG_USUARIO_ID).orEmpty(),
+                    onAtras = { navController.popBackStack() }
+                )
+            }
+            composable(RUTA_REGISTRAR_ADMIN) {
+                RegistrarAdministradorScreen(
+                    onAtras = { navController.popBackStack() },
+                    onRegistrado = { navController.popBackStack() }
+                )
+            }
+            composable(RUTA_ENVIAR_AVISO) {
+                EnviarAvisoScreen(
+                    onAtras = { navController.popBackStack() },
+                    onEnviado = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

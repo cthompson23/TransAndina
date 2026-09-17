@@ -132,7 +132,7 @@ class KilometrajeViewModel(
 
             detalle.contains("row-level security", ignoreCase = true) ||
                 detalle.contains("policy", ignoreCase = true) ->
-                "Solo el conductor asignado puede registrar el kilometraje de este vehículo"
+                "No tienes permiso para registrar el kilometraje de este vehículo"
 
             else -> "No se pudo registrar. Intenta de nuevo"
         }

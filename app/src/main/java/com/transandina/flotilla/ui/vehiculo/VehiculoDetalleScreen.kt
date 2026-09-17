@@ -32,15 +32,28 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.transandina.flotilla.R
 import com.transandina.flotilla.data.model.KilometrajeHistorico
+import com.transandina.flotilla.data.model.Mantenimiento
+import com.transandina.flotilla.data.model.RolUsuario
+import com.transandina.flotilla.data.model.TipoMantenimiento
+import com.transandina.flotilla.data.model.Usuario
 import com.transandina.flotilla.data.model.Vehiculo
 import com.transandina.flotilla.domain.EstadoDocumento
+import com.transandina.flotilla.domain.EstadoMantenimiento
+import com.transandina.flotilla.domain.ProximoMantenimiento
+import com.transandina.flotilla.domain.TipoDocumento
 import com.transandina.flotilla.domain.calcularEstadoDocumento
+import com.transandina.flotilla.domain.fechasDocumentos
+import com.transandina.flotilla.domain.formatearFecha
 import com.transandina.flotilla.domain.formatearFechaIso
 import com.transandina.flotilla.domain.formatearKilometrosConUnidad
 import com.transandina.flotilla.domain.parsearFechaIso
 import com.transandina.flotilla.ui.components.BotonPrimario
+import com.transandina.flotilla.ui.components.BotonSecundario
 import com.transandina.flotilla.ui.components.ChipEstado
+import com.transandina.flotilla.ui.components.ChipEstadoMantenimiento
+import com.transandina.flotilla.ui.components.ChipsFiltro
 import com.transandina.flotilla.ui.components.DatoEtiquetado
+import com.transandina.flotilla.ui.components.TarjetaMantenimiento
 import com.transandina.flotilla.ui.components.EstadoVacio
 import com.transandina.flotilla.ui.components.GraficoLineaKilometraje
 import com.transandina.flotilla.ui.components.NivelEstado
@@ -61,8 +74,11 @@ enum class PestanaVehiculo { INFORMACION, HISTORIAL, KILOMETRAJE, DOCUMENTOS }
  * `87:135`). Recibe el id por la ruta para que sirva tanto al conductor con su
  * unidad como al encargado con cualquier vehículo de la flotilla.
  *
- * @param accionesExtra se dibuja al final de la pestaña Información. Por ahora
- *   va vacío; en la Fase 4 ahí entra "Reasignar conductor".
+ * @param esEncargado muestra el conductor asignado y las acciones del
+ *   encargado: reasignar, editar datos y documentos, y registrar
+ *   mantenimientos (Figma `102:178`).
+ * @param puedeRegistrarKilometraje lo pueden hacer el conductor asignado y el
+ *   encargado (migración 202609172200), no el mecánico.
  */
 @Composable
 fun VehiculoDetalleScreen(
@@ -70,10 +86,14 @@ fun VehiculoDetalleScreen(
     modifier: Modifier = Modifier,
     pestanaInicial: PestanaVehiculo = PestanaVehiculo.INFORMACION,
     viewModel: VehiculoDetalleViewModel = viewModel(),
+    esEncargado: Boolean = false,
+    puedeRegistrarKilometraje: Boolean = true,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (vehiculoId: String) -> Unit = {},
-    tokenRecarga: Int = 0,
-    accionesExtra: @Composable ColumnScope.(Vehiculo) -> Unit = {}
+    onRegistrarMantenimiento: (vehiculoId: String) -> Unit = {},
+    onReasignarConductor: (vehiculoId: String) -> Unit = {},
+    onEditarVehiculo: (vehiculoId: String) -> Unit = {},
+    tokenRecarga: Int = 0
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -85,9 +105,13 @@ fun VehiculoDetalleScreen(
         uiState = uiState,
         pestanaInicial = pestanaInicial,
         modifier = modifier,
+        esEncargado = esEncargado,
+        puedeRegistrarKilometraje = puedeRegistrarKilometraje,
         onAtras = onAtras,
         onRegistrarKilometraje = onRegistrarKilometraje,
-        accionesExtra = accionesExtra
+        onRegistrarMantenimiento = onRegistrarMantenimiento,
+        onReasignarConductor = onReasignarConductor,
+        onEditarVehiculo = onEditarVehiculo
     )
 }
 
@@ -96,9 +120,13 @@ private fun ContenidoDetalle(
     uiState: VehiculoDetalleUiState,
     pestanaInicial: PestanaVehiculo,
     modifier: Modifier = Modifier,
+    esEncargado: Boolean = false,
+    puedeRegistrarKilometraje: Boolean = true,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (String) -> Unit = {},
-    accionesExtra: @Composable ColumnScope.(Vehiculo) -> Unit = {}
+    onRegistrarMantenimiento: (String) -> Unit = {},
+    onReasignarConductor: (String) -> Unit = {},
+    onEditarVehiculo: (String) -> Unit = {}
 ) {
     var pestana by rememberSaveable { mutableStateOf(pestanaInicial) }
     val vehiculo = uiState.vehiculo
@@ -110,7 +138,11 @@ private fun ContenidoDetalle(
     ) {
         TransAndinaTopBar(
             titulo = when (pestana) {
-                PestanaVehiculo.INFORMACION -> stringResource(R.string.vehiculo_titulo)
+                PestanaVehiculo.INFORMACION -> if (esEncargado) {
+                    stringResource(R.string.detalle_titulo_encargado)
+                } else {
+                    stringResource(R.string.vehiculo_titulo)
+                }
                 PestanaVehiculo.HISTORIAL -> stringResource(R.string.detalle_titulo_historial)
                 PestanaVehiculo.KILOMETRAJE -> stringResource(R.string.vehiculo_opcion_kilometraje)
                 PestanaVehiculo.DOCUMENTOS -> stringResource(R.string.vehiculo_opcion_documentos)
@@ -155,18 +187,33 @@ private fun ContenidoDetalle(
                     when (pestana) {
                         PestanaVehiculo.INFORMACION -> PestanaInformacion(
                             vehiculo = vehiculo,
-                            accionesExtra = accionesExtra
+                            conductor = uiState.conductor,
+                            esEncargado = esEncargado,
+                            onReasignarConductor = { onReasignarConductor(vehiculo.id) },
+                            onEditarVehiculo = { onEditarVehiculo(vehiculo.id) }
                         )
 
-                        PestanaVehiculo.HISTORIAL -> PestanaHistorial()
+                        // Por ahora solo el encargado registra desde aquí; el
+                        // formulario del conductor se conecta más adelante.
+                        PestanaVehiculo.HISTORIAL -> PestanaHistorial(
+                            mantenimientos = uiState.mantenimientos,
+                            puedeRegistrar = esEncargado,
+                            onRegistrar = { onRegistrarMantenimiento(vehiculo.id) }
+                        )
 
                         PestanaVehiculo.KILOMETRAJE -> PestanaKilometraje(
                             vehiculo = vehiculo,
                             historial = uiState.historialKilometraje,
+                            proximos = uiState.proximosMantenimientos,
+                            puedeRegistrar = puedeRegistrarKilometraje,
                             onRegistrarKilometraje = { onRegistrarKilometraje(vehiculo.id) }
                         )
 
-                        PestanaVehiculo.DOCUMENTOS -> PestanaDocumentos(vehiculo = vehiculo)
+                        PestanaVehiculo.DOCUMENTOS -> PestanaDocumentos(
+                            vehiculo = vehiculo,
+                            esEncargado = esEncargado,
+                            onEditarDocumentos = { onEditarVehiculo(vehiculo.id) }
+                        )
                     }
                 }
             }
@@ -174,11 +221,17 @@ private fun ContenidoDetalle(
     }
 }
 
-/** Datos de solo lectura (Figma `28:418`). Sin botón de editar. */
+/**
+ * Datos de solo lectura (Figma `28:418`). El encargado ve además el conductor
+ * asignado, el kilometraje y sus acciones (Figma `102:178`).
+ */
 @Composable
 private fun ColumnScope.PestanaInformacion(
     vehiculo: Vehiculo,
-    accionesExtra: @Composable ColumnScope.(Vehiculo) -> Unit
+    conductor: Usuario?,
+    esEncargado: Boolean,
+    onReasignarConductor: () -> Unit,
+    onEditarVehiculo: () -> Unit
 ) {
     TarjetaTransAndina {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -211,13 +264,89 @@ private fun ColumnScope.PestanaInformacion(
         }
     }
 
-    accionesExtra(vehiculo)
+    if (!esEncargado) return
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    TarjetaTransAndina {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            DatoEtiquetado(
+                etiqueta = stringResource(R.string.detalle_conductor_asignado),
+                valor = when {
+                    conductor != null -> conductor.nombreCompleto
+                    vehiculo.conductorId != null -> stringResource(R.string.detalle_conductor_no_disponible)
+                    else -> stringResource(R.string.sin_conductor)
+                }
+            )
+            DatoEtiquetado(
+                etiqueta = stringResource(R.string.kilometraje_actual),
+                valor = formatearKilometrosConUnidad(vehiculo.kmActual)
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    BotonPrimario(
+        texto = if (vehiculo.conductorId == null) {
+            stringResource(R.string.detalle_asignar_conductor)
+        } else {
+            stringResource(R.string.detalle_reasignar_conductor)
+        },
+        onClick = onReasignarConductor,
+        modifier = Modifier.fillMaxWidth()
+    )
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    BotonSecundario(
+        texto = stringResource(R.string.detalle_editar_vehiculo),
+        onClick = onEditarVehiculo,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
-/** Se llena en la Parte B, cuando exista el repositorio de mantenimientos. */
+/** Historial con filtro por tipo (Figma `51:125`, `102:178`). */
 @Composable
-private fun PestanaHistorial() {
-    EstadoVacio(mensaje = stringResource(R.string.historial_vacio))
+private fun ColumnScope.PestanaHistorial(
+    mantenimientos: List<Mantenimiento>,
+    puedeRegistrar: Boolean,
+    onRegistrar: () -> Unit
+) {
+    var filtro by rememberSaveable { mutableStateOf<TipoMantenimiento?>(null) }
+    val opciones = listOf(null, TipoMantenimiento.preventivo, TipoMantenimiento.correctivo)
+
+    if (puedeRegistrar) {
+        BotonPrimario(
+            texto = stringResource(R.string.mant_titulo),
+            onClick = onRegistrar,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+    }
+
+    ChipsFiltro(
+        opciones = listOf(
+            stringResource(R.string.filtro_todos),
+            stringResource(R.string.mantenimiento_preventivo),
+            stringResource(R.string.mantenimiento_correctivo)
+        ),
+        indiceSeleccionado = opciones.indexOf(filtro),
+        onSeleccionar = { filtro = opciones[it] }
+    )
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    val visibles = mantenimientos.filter { filtro == null || it.tipo == filtro }
+    if (visibles.isEmpty()) {
+        EstadoVacio(mensaje = stringResource(R.string.historial_vacio))
+        return
+    }
+
+    visibles.forEach { mantenimiento ->
+        TarjetaMantenimiento(mantenimiento = mantenimiento)
+        Spacer(modifier = Modifier.height(12.dp))
+    }
 }
 
 /** Kilometraje actual, gráfico por mes y acceso a registrar (Figma `51:217`). */
@@ -225,6 +354,8 @@ private fun PestanaHistorial() {
 private fun ColumnScope.PestanaKilometraje(
     vehiculo: Vehiculo,
     historial: List<KilometrajeHistorico>,
+    proximos: List<ProximoMantenimiento>,
+    puedeRegistrar: Boolean,
     onRegistrarKilometraje: () -> Unit
 ) {
     TarjetaTransAndina {
@@ -257,12 +388,11 @@ private fun ColumnScope.PestanaKilometraje(
         }
     }
 
-    // TODO(backend): la tarjeta "Próximo mantenimiento preventivo" del Figma
-    //  (51:217) necesita cruzar `frecuencias_mantenimiento` (km_frecuencia /
-    //  dias_frecuencia por tipo de vehículo y categoría) con el ÚLTIMO
-    //  mantenimiento de esa categoría, que vive en la tabla `mantenimientos`.
-    //  Esa tabla se conecta en la Parte B; hasta entonces no se muestra nada,
-    //  para no inventar una fecha estimada.
+    Spacer(modifier = Modifier.height(12.dp))
+
+    TarjetaProximoMantenimiento(proximos)
+
+    if (!puedeRegistrar) return
 
     Spacer(modifier = Modifier.height(16.dp))
 
@@ -274,36 +404,112 @@ private fun ColumnScope.PestanaKilometraje(
 }
 
 /**
- * Una tarjeta por cada fecha registrada en `vehiculos` (Figma `87:135`).
- *
- * TODO(backend): el Figma muestra además "Permiso de carga" y un enlace
- *  "Ver documento ›". Ninguno existe hoy: los documentos son tres columnas
- *  `date` en `vehiculos`, no una entidad con archivos adjuntos
- *  (docs/ADAPTACION_MOVIL.md §8).
+ * "Próximo mantenimiento preventivo" (Figma `51:217`): una fila por categoría,
+ * calculada con `frecuencias_mantenimiento` y el último servicio registrado.
  */
 @Composable
-private fun ColumnScope.PestanaDocumentos(vehiculo: Vehiculo) {
-    val documentos = listOf(
-        stringResource(R.string.documentos_marchamo) to vehiculo.fechaMarchamo,
-        stringResource(R.string.documentos_revision) to vehiculo.fechaRevisionTecnica,
-        stringResource(R.string.documentos_seguro) to vehiculo.fechaSeguro
-    ).filter { (_, fecha) -> fecha != null }
+private fun TarjetaProximoMantenimiento(proximos: List<ProximoMantenimiento>) {
+    TarjetaTransAndina {
+        Text(
+            text = stringResource(R.string.kilometraje_proximo_titulo),
+            style = MaterialTheme.typography.bodyMedium,
+            color = TransAndinaTheme.colores.textoSecundario
+        )
+        if (proximos.isEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.kilometraje_proximo_sin_datos),
+                style = MaterialTheme.typography.bodySmall,
+                color = TransAndinaTheme.colores.textoSecundario
+            )
+        }
+        proximos
+            .sortedByDescending { it.estado }
+            .forEach { proximo ->
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = proximo.categoria,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = textoProximo(proximo),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TransAndinaTheme.colores.textoSecundario
+                        )
+                    }
+                    ChipEstadoMantenimiento(proximo.estado)
+                }
+            }
+    }
+}
+
+@Composable
+private fun textoProximo(proximo: ProximoMantenimiento): String {
+    val km = proximo.kmObjetivo?.let(::formatearKilometrosConUnidad)
+    val fecha = proximo.fechaObjetivo?.let(::formatearFecha)
+    return when {
+        km != null && fecha != null -> stringResource(R.string.kilometraje_proximo_km_o_fecha, km, fecha)
+        km != null -> stringResource(R.string.kilometraje_proximo_km, km)
+        fecha != null -> stringResource(R.string.kilometraje_proximo_fecha, fecha)
+        else -> ""
+    }
+}
+
+/**
+ * Una tarjeta por cada fecha registrada en `vehiculos` (Figma `87:135`).
+ * El conductor solo ve las que tienen fecha; el encargado ve las cuatro, para
+ * notar las que faltan, y puede editarlas.
+ *
+ * El enlace "Ver documento ›" del Figma no se implementa: los documentos son
+ * fechas, no archivos adjuntos (docs/ADAPTACION_MOVIL.md §8).
+ */
+@Composable
+private fun ColumnScope.PestanaDocumentos(
+    vehiculo: Vehiculo,
+    esEncargado: Boolean,
+    onEditarDocumentos: () -> Unit
+) {
+    val documentos = vehiculo.fechasDocumentos()
+        .filter { (_, fecha) -> esEncargado || fecha != null }
 
     if (documentos.isEmpty()) {
         EstadoVacio(mensaje = stringResource(R.string.documentos_vacio))
         return
     }
 
-    documentos.forEach { (nombre, fechaIso) ->
-        TarjetaDocumento(nombre = nombre, fechaIso = fechaIso)
+    documentos.forEach { (documento, fechaIso) ->
+        TarjetaDocumento(nombre = nombreDocumento(documento), fechaIso = fechaIso)
         Spacer(modifier = Modifier.height(12.dp))
     }
 
-    Text(
-        text = stringResource(R.string.documentos_pie),
-        style = MaterialTheme.typography.labelSmall,
-        color = TransAndinaTheme.colores.textoSecundario
-    )
+    if (esEncargado) {
+        Spacer(modifier = Modifier.height(4.dp))
+        BotonPrimario(
+            texto = stringResource(R.string.documentos_editar),
+            onClick = onEditarDocumentos,
+            modifier = Modifier.fillMaxWidth()
+        )
+    } else {
+        Text(
+            text = stringResource(R.string.documentos_pie),
+            style = MaterialTheme.typography.labelSmall,
+            color = TransAndinaTheme.colores.textoSecundario
+        )
+    }
+}
+
+@Composable
+internal fun nombreDocumento(documento: TipoDocumento): String = when (documento) {
+    TipoDocumento.MARCHAMO -> stringResource(R.string.documentos_marchamo)
+    TipoDocumento.REVISION_TECNICA -> stringResource(R.string.documentos_revision)
+    TipoDocumento.SEGURO -> stringResource(R.string.documentos_seguro)
+    TipoDocumento.PERMISO_CARGA -> stringResource(R.string.documentos_permiso_carga)
 }
 
 @Composable
@@ -386,13 +592,74 @@ private val historialDeMuestra = listOf(
     KilometrajeHistorico("7", "1", "2026-09-07", 492_400.0)
 )
 
+private val mantenimientosDeMuestra = listOf(
+    Mantenimiento(
+        id = "m1",
+        vehiculoId = "1",
+        registradoPor = "u1",
+        tipo = TipoMantenimiento.preventivo,
+        categoria = "Cambio de aceite",
+        fecha = "2026-08-25",
+        km = 492_000.0,
+        responsable = "Marco Ureña",
+        costo = 45_000.0,
+        taller = "Taller Central"
+    ),
+    Mantenimiento(
+        id = "m2",
+        vehiculoId = "1",
+        registradoPor = "u1",
+        tipo = TipoMantenimiento.correctivo,
+        categoria = "Llantas",
+        fecha = "2026-07-02",
+        km = 488_500.0,
+        costo = 320_000.0,
+        taller = "Taller Norte"
+    )
+)
+
+private val proximosDeMuestra = listOf(
+    ProximoMantenimiento(
+        categoria = "Cambio de aceite",
+        ultimaFecha = java.time.LocalDate.of(2026, 8, 25),
+        kmObjetivo = 497_000.0,
+        fechaObjetivo = java.time.LocalDate.of(2027, 2, 21),
+        kmRestantes = 4_600.0,
+        diasRestantes = 157,
+        estado = EstadoMantenimiento.AL_DIA
+    ),
+    ProximoMantenimiento(
+        categoria = "Llantas",
+        ultimaFecha = java.time.LocalDate.of(2026, 7, 2),
+        kmObjetivo = 498_500.0,
+        fechaObjetivo = java.time.LocalDate.of(2026, 9, 29),
+        kmRestantes = 6_100.0,
+        diasRestantes = 12,
+        estado = EstadoMantenimiento.PROXIMO
+    )
+)
+
+private val conductorDeMuestra = Usuario(
+    id = "c1",
+    nombreCompleto = "Carlos Fernández Quesada",
+    cedula = "111111111",
+    email = "carlos@transandina.cr",
+    rol = RolUsuario.conductor
+)
+
 @Composable
 private fun DetalleDePrueba(
     uiState: VehiculoDetalleUiState,
-    pestana: PestanaVehiculo
+    pestana: PestanaVehiculo,
+    esEncargado: Boolean = false
 ) {
     TransAndinaFlotillaTheme {
-        ContenidoDetalle(uiState = uiState, pestanaInicial = pestana, onAtras = {})
+        ContenidoDetalle(
+            uiState = uiState,
+            pestanaInicial = pestana,
+            esEncargado = esEncargado,
+            onAtras = {}
+        )
     }
 }
 
@@ -402,6 +669,41 @@ private fun DetalleInformacionPreview() {
     DetalleDePrueba(
         VehiculoDetalleUiState(vehiculo = vehiculoDeMuestra),
         PestanaVehiculo.INFORMACION
+    )
+}
+
+@Preview(name = "Detalle · Información (encargado)", showBackground = true, heightDp = 900)
+@Composable
+private fun DetalleInformacionEncargadoPreview() {
+    DetalleDePrueba(
+        VehiculoDetalleUiState(
+            vehiculo = vehiculoDeMuestra.copy(conductorId = "c1"),
+            conductor = conductorDeMuestra
+        ),
+        PestanaVehiculo.INFORMACION,
+        esEncargado = true
+    )
+}
+
+@Preview(name = "Detalle · Historial", showBackground = true, heightDp = 600)
+@Composable
+private fun DetalleHistorialConDatosPreview() {
+    DetalleDePrueba(
+        VehiculoDetalleUiState(
+            vehiculo = vehiculoDeMuestra,
+            mantenimientos = mantenimientosDeMuestra
+        ),
+        PestanaVehiculo.HISTORIAL
+    )
+}
+
+@Preview(name = "Detalle · Documentos (encargado)", showBackground = true, heightDp = 800)
+@Composable
+private fun DetalleDocumentosEncargadoPreview() {
+    DetalleDePrueba(
+        VehiculoDetalleUiState(vehiculo = vehiculoDeMuestra),
+        PestanaVehiculo.DOCUMENTOS,
+        esEncargado = true
     )
 }
 
@@ -420,7 +722,8 @@ private fun DetalleKilometrajePreview() {
     DetalleDePrueba(
         VehiculoDetalleUiState(
             vehiculo = vehiculoDeMuestra,
-            historialKilometraje = historialDeMuestra
+            historialKilometraje = historialDeMuestra,
+            proximosMantenimientos = proximosDeMuestra
         ),
         PestanaVehiculo.KILOMETRAJE
     )

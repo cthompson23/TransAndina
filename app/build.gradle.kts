@@ -81,6 +81,8 @@ dependencies {
     implementation(platform("io.github.jan-tennert.supabase:bom:3.0.3"))
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:auth-kt")
+    // Fotos de evidencia de los mantenimientos (bucket `mantenimientos`)
+    implementation("io.github.jan-tennert.supabase:storage-kt")
 
     // Cliente HTTP requerido por supabase-kt
     implementation("io.ktor:ktor-client-android:3.0.0")

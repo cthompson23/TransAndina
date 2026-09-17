@@ -2,6 +2,7 @@ package com.transandina.flotilla.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.transandina.flotilla.data.model.EstadoCuenta
 import com.transandina.flotilla.data.model.RolUsuario
 import com.transandina.flotilla.data.repository.AuthRepository
 import com.transandina.flotilla.data.repository.UsuarioRepository
@@ -50,9 +51,9 @@ class LoginViewModel(
                 // Necesitamos el rol ANTES de navegar, para saber qué
                 // pantalla y qué menú mostrarle a este usuario.
                 val usuarioId = authRepository.usuarioActualId()
-                val rol = usuarioId?.let { usuarioRepository.obtenerPerfil(it)?.rol }
+                val perfil = usuarioId?.let { usuarioRepository.obtenerPerfil(it) }
 
-                if (rol == null) {
+                if (perfil == null) {
                     _uiState.update {
                         it.copy(
                             cargando = false,
@@ -62,7 +63,25 @@ class LoginViewModel(
                     return@launch
                 }
 
-                _uiState.update { it.copy(cargando = false, autenticado = true, rol = rol) }
+                // Supabase Auth deja entrar a una cuenta suspendida (la
+                // contraseña es válida); la base ya no le devuelve datos, así
+                // que se cierra la sesión y se explica el motivo.
+                if (perfil.estado != EstadoCuenta.activo) {
+                    authRepository.cerrarSesion()
+                    _uiState.update {
+                        it.copy(
+                            cargando = false,
+                            error = if (perfil.estado == EstadoCuenta.suspendido) {
+                                "Tu cuenta está suspendida. Contacta al encargado de flota."
+                            } else {
+                                "Tu cuenta fue desactivada. Contacta al encargado de flota."
+                            }
+                        )
+                    }
+                    return@launch
+                }
+
+                _uiState.update { it.copy(cargando = false, autenticado = true, rol = perfil.rol) }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(cargando = false, error = "Credenciales inválidas o sin conexión")

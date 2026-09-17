@@ -57,6 +57,9 @@ val EstadoCritico = Color(0xFFAD2626)
 /** "Informativa". */
 val EstadoInfo = Navy
 
+/** "Desactivado" en la lista de usuarios (Figma `102:258`). */
+val EstadoNeutro = Color(0xFF737373)
+
 /** Opacidad del fondo de los chips de estado sobre su color pleno. */
 const val ALFA_FONDO_ESTADO = 0.15f
 

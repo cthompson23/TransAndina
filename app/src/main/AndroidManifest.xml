@@ -38,6 +38,18 @@
                     android:host="reset-password" />
             </intent-filter>
         </activity>
+
+        <!-- Comparte los reportes PDF con otras apps sin exponer rutas
+             internas. La autoridad debe coincidir con ExportadorPdfReporte.kt. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.archivos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/rutas_archivos" />
+        </provider>
     </application>
 
 </manifest>
