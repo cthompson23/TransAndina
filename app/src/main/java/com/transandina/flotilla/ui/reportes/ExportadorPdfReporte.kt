@@ -1,10 +1,14 @@
 package com.transandina.flotilla.ui.reportes
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import android.os.Build
+import android.provider.MediaStore
+import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.FileProvider
 import com.transandina.flotilla.R
@@ -110,6 +114,33 @@ object ExportadorPdfReporte {
         } finally {
             documento.close()
         }
+    }
+
+    /**
+     * Copia el PDF a la carpeta Descargas del teléfono, donde queda visible
+     * desde la app Archivos aunque no haya un lector de PDF instalado.
+     *
+     * Solo desde Android 10: antes hacía falta el permiso de almacenamiento,
+     * que no vale la pena pedir para esto.
+     */
+    @RequiresApi(Build.VERSION_CODES.Q)
+    fun guardarEnDescargas(context: Context, archivo: File): String {
+        val datos = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, archivo.name)
+            put(MediaStore.Downloads.MIME_TYPE, "application/pdf")
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+        val resolver = context.contentResolver
+        val destino = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, datos)
+            ?: error("No se pudo crear el archivo en Descargas")
+
+        resolver.openOutputStream(destino).use { salida ->
+            checkNotNull(salida) { "No se pudo escribir en Descargas" }
+            archivo.inputStream().use { it.copyTo(salida) }
+        }
+        // Mientras está "pendiente" nadie más lo ve; al terminar se publica.
+        resolver.update(destino, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null)
+        return archivo.name
     }
 
     /** Abre el selector del sistema para mandar el PDF por correo, WhatsApp, Drive, etc. */

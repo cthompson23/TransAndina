@@ -84,6 +84,12 @@ dependencies {
     // Fotos de evidencia de los mantenimientos (bucket `mantenimientos`)
     implementation("io.github.jan-tennert.supabase:storage-kt")
 
+    // Carga de imágenes desde las URLs firmadas del bucket.
+    // 3.3.0 es la última que compila contra Kotlin 2.2; las más nuevas piden
+    // una versión de Kotlin mayor a la del proyecto.
+    implementation("io.coil-kt.coil3:coil-compose:3.3.0")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
+
     // Cliente HTTP requerido por supabase-kt
     implementation("io.ktor:ktor-client-android:3.0.0")
 

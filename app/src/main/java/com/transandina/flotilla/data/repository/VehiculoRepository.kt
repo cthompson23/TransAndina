@@ -7,6 +7,11 @@ import com.transandina.flotilla.di.SupabaseProvider
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.Serializable
+
+/** Alta o baja de un vehículo. */
+@Serializable
+private data class EstadoVehiculoPayload(val activo: Boolean)
 
 /**
  * Único punto de lectura de la tabla `vehiculos`. Las políticas RLS deciden
@@ -52,6 +57,18 @@ class VehiculoRepository {
     suspend fun actualizarVehiculo(id: String, datos: VehiculoPayload) {
         SupabaseProvider.client.postgrest["vehiculos"]
             .update(datos) {
+                filter { eq("id", id) }
+            }
+    }
+
+    /**
+     * Da de baja un vehículo o lo reactiva. Un vehículo inactivo deja de
+     * aparecer en el vehículo asignado del conductor y no genera alertas,
+     * pero conserva su historial.
+     */
+    suspend fun cambiarActivo(id: String, activo: Boolean) {
+        SupabaseProvider.client.postgrest["vehiculos"]
+            .update(EstadoVehiculoPayload(activo)) {
                 filter { eq("id", id) }
             }
     }

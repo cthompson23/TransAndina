@@ -1,6 +1,7 @@
 package com.transandina.flotilla.ui.reportes
 
 import android.content.Context
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -32,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -44,6 +46,7 @@ import com.transandina.flotilla.domain.formatearColones
 import com.transandina.flotilla.domain.formatearFecha
 import com.transandina.flotilla.domain.formatearFechaIso
 import com.transandina.flotilla.ui.components.BotonConfirmar
+import com.transandina.flotilla.ui.components.BotonPrimario
 import com.transandina.flotilla.ui.components.BotonSecundario
 import com.transandina.flotilla.ui.components.CampoFecha
 import com.transandina.flotilla.ui.components.CampoSeleccion
@@ -69,11 +72,48 @@ import java.time.LocalDate
 fun ReportesScreen(viewModel: ReportesViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val recursos = LocalResources.current
     val alcance = rememberCoroutineScope()
     var exportando by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.cargar()
+    }
+
+    /**
+     * Genera el PDF y lo comparte, o lo guarda en la carpeta Descargas del
+     * teléfono. El archivo se arma en la caché en los dos casos.
+     */
+    fun exportarPdf(guardarEnDescargas: Boolean) {
+        exportando = true
+        alcance.launch {
+            try {
+                val datos = armarDatosPdf(context, uiState)
+                val archivo = withContext(Dispatchers.IO) {
+                    ExportadorPdfReporte.generar(
+                        context = context,
+                        datos = datos,
+                        nombreArchivo = "reporte-mantenimientos-${LocalDate.now()}.pdf"
+                    )
+                }
+                if (guardarEnDescargas && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val nombre = withContext(Dispatchers.IO) {
+                        ExportadorPdfReporte.guardarEnDescargas(context, archivo)
+                    }
+                    Toast.makeText(
+                        context,
+                        recursos.getString(R.string.reporte_guardado, nombre),
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    ExportadorPdfReporte.compartir(context, archivo)
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, R.string.reporte_error_pdf, Toast.LENGTH_LONG).show()
+            } finally {
+                exportando = false
+            }
+        }
     }
 
     if (uiState.resultado == null) {
@@ -95,25 +135,11 @@ fun ReportesScreen(viewModel: ReportesViewModel = viewModel()) {
             uiState = uiState,
             exportando = exportando,
             onModificarFiltros = viewModel::modificarFiltros,
-            onExportar = {
-                exportando = true
-                alcance.launch {
-                    try {
-                        val datos = armarDatosPdf(context, uiState)
-                        val archivo = withContext(Dispatchers.IO) {
-                            ExportadorPdfReporte.generar(
-                                context = context,
-                                datos = datos,
-                                nombreArchivo = "reporte-mantenimientos-${LocalDate.now()}.pdf"
-                            )
-                        }
-                        ExportadorPdfReporte.compartir(context, archivo)
-                    } catch (e: Exception) {
-                        Toast.makeText(context, R.string.reporte_error_pdf, Toast.LENGTH_LONG).show()
-                    } finally {
-                        exportando = false
-                    }
-                }
+            onExportar = { exportarPdf(guardarEnDescargas = false) },
+            onGuardarEnDescargas = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                { exportarPdf(guardarEnDescargas = true) }
+            } else {
+                null
             }
         )
     }
@@ -250,7 +276,9 @@ private fun ContenidoResultado(
     uiState: ReportesUiState,
     exportando: Boolean,
     onModificarFiltros: () -> Unit,
-    onExportar: () -> Unit
+    onExportar: () -> Unit,
+    /** Null en Android 9 o menos, donde haría falta permiso de almacenamiento. */
+    onGuardarEnDescargas: (() -> Unit)? = null
 ) {
     val resultado = uiState.resultado.orEmpty()
     val placas = uiState.placasPorVehiculo
@@ -301,6 +329,15 @@ private fun ContenidoResultado(
                             modifier = Modifier.weight(1f),
                             habilitado = resultado.isNotEmpty(),
                             cargando = exportando
+                        )
+                    }
+                    if (onGuardarEnDescargas != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        BotonPrimario(
+                            texto = stringResource(R.string.reporte_guardar_descargas),
+                            onClick = onGuardarEnDescargas,
+                            modifier = Modifier.fillMaxWidth(),
+                            habilitado = resultado.isNotEmpty() && !exportando
                         )
                     }
                 }

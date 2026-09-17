@@ -24,6 +24,8 @@ data class VehiculoDetalleUiState(
     val conductor: Usuario? = null,
     val historialKilometraje: List<KilometrajeHistorico> = emptyList(),
     val mantenimientos: List<Mantenimiento> = emptyList(),
+    /** URLs firmadas de las fotos de evidencia, por id de mantenimiento. */
+    val fotosPorMantenimiento: Map<String, List<String>> = emptyMap(),
     val proximosMantenimientos: List<ProximoMantenimiento> = emptyList(),
     val cargando: Boolean = false,
     val error: String? = null
@@ -76,12 +78,19 @@ class VehiculoDetalleViewModel(
                         }
                     }
 
+                    // Las URLs de las fotos se firman aparte, porque dependen
+                    // de los mantenimientos que hayan vuelto.
+                    val fotos = runCatching {
+                        mantenimientoRepository.obtenerFotos(mantenimientos.await().map { m -> m.id })
+                    }.getOrDefault(emptyMap())
+
                     _uiState.update {
                         it.copy(
                             vehiculo = vehiculo,
                             conductor = conductor.await(),
                             historialKilometraje = historial.await(),
                             mantenimientos = mantenimientos.await(),
+                            fotosPorMantenimiento = fotos,
                             proximosMantenimientos = calcularProximosMantenimientos(
                                 tipoVehiculo = vehiculo.tipo,
                                 kmActual = vehiculo.kmActual,

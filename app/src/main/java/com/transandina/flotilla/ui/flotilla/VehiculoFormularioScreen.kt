@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -17,6 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -26,10 +31,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.transandina.flotilla.R
 import com.transandina.flotilla.data.model.TIPOS_VEHICULO
+import com.transandina.flotilla.ui.components.BotonDestructivo
+import com.transandina.flotilla.ui.components.BotonSecundario
 import com.transandina.flotilla.ui.components.CampoFecha
 import com.transandina.flotilla.ui.components.CampoSeleccion
 import com.transandina.flotilla.ui.components.CampoTexto
+import com.transandina.flotilla.ui.components.ChipEstado
+import com.transandina.flotilla.ui.components.DialogoConfirmacion
 import com.transandina.flotilla.ui.components.FilaBotonesFormulario
+import com.transandina.flotilla.ui.components.NivelEstado
+import com.transandina.flotilla.ui.components.TarjetaTransAndina
 import com.transandina.flotilla.ui.components.TransAndinaTopBar
 import com.transandina.flotilla.ui.theme.FormaPildora
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
@@ -72,6 +83,7 @@ fun VehiculoFormularioScreen(
             onSeguro = viewModel::onFechaSeguroChange,
             onPermiso = viewModel::onFechaPermisoChange,
             onGuardar = viewModel::guardar,
+            onCambiarActivo = viewModel::cambiarActivo,
             onCancelar = onAtras
         )
     )
@@ -90,6 +102,7 @@ private data class AccionesVehiculoFormulario(
     val onSeguro: (LocalDate) -> Unit = {},
     val onPermiso: (LocalDate) -> Unit = {},
     val onGuardar: () -> Unit = {},
+    val onCambiarActivo: (Boolean) -> Unit = {},
     val onCancelar: () -> Unit = {}
 )
 
@@ -251,8 +264,93 @@ private fun ContenidoVehiculoFormulario(
                 cargando = uiState.guardando
             )
 
+            if (uiState.esEdicion) {
+                Spacer(modifier = Modifier.height(4.dp))
+                SeccionBaja(
+                    uiState = uiState,
+                    habilitado = editable,
+                    onCambiarActivo = acciones.onCambiarActivo
+                )
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
         }
+    }
+}
+
+/**
+ * Baja y alta del vehículo. Darlo de baja lo saca de la flotilla activa y de
+ * las alertas, pero conserva su historial; por eso no se borra nada.
+ */
+@Composable
+private fun SeccionBaja(
+    uiState: VehiculoFormularioUiState,
+    habilitado: Boolean,
+    onCambiarActivo: (Boolean) -> Unit
+) {
+    var pedirConfirmacion by rememberSaveable { mutableStateOf(false) }
+
+    TarjetaTransAndina {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.vehiculo_form_estado),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            ChipEstado(
+                texto = if (uiState.activo) {
+                    stringResource(R.string.vehiculo_form_activo)
+                } else {
+                    stringResource(R.string.flotilla_inactivo)
+                },
+                nivel = if (uiState.activo) NivelEstado.OK else NivelEstado.NEUTRO
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = if (uiState.activo) {
+                stringResource(R.string.vehiculo_form_baja_ayuda)
+            } else {
+                stringResource(R.string.vehiculo_form_alta_ayuda)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = TransAndinaTheme.colores.textoSecundario
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        if (uiState.activo) {
+            BotonDestructivo(
+                texto = stringResource(R.string.vehiculo_form_dar_baja),
+                onClick = { pedirConfirmacion = true },
+                modifier = Modifier.fillMaxWidth(),
+                habilitado = habilitado
+            )
+        } else {
+            BotonSecundario(
+                texto = stringResource(R.string.vehiculo_form_reactivar),
+                onClick = { onCambiarActivo(true) },
+                modifier = Modifier.fillMaxWidth(),
+                habilitado = habilitado
+            )
+        }
+    }
+
+    if (pedirConfirmacion) {
+        DialogoConfirmacion(
+            titulo = stringResource(R.string.vehiculo_form_baja_dialogo_titulo),
+            mensaje = if (uiState.tieneConductor) {
+                stringResource(R.string.vehiculo_form_baja_dialogo_con_conductor, uiState.placa)
+            } else {
+                stringResource(R.string.vehiculo_form_baja_dialogo, uiState.placa)
+            },
+            textoConfirmar = stringResource(R.string.vehiculo_form_dar_baja),
+            destructiva = true,
+            onConfirmar = {
+                pedirConfirmacion = false
+                onCambiarActivo(false)
+            },
+            onCancelar = { pedirConfirmacion = false }
+        )
     }
 }
 

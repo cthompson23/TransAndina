@@ -43,6 +43,14 @@ data class NuevoMantenimientoPayload(
     val taller: String
 )
 
+/** Fila de `mantenimiento_fotos` leída de la base. */
+@Serializable
+data class FotoMantenimiento(
+    val id: String,
+    @SerialName("mantenimiento_id") val mantenimientoId: String,
+    @SerialName("storage_path") val rutaArchivo: String
+)
+
 /** Fila de `mantenimiento_fotos`: apunta a un archivo del bucket `mantenimientos`. */
 @Serializable
 data class NuevaFotoMantenimientoPayload(

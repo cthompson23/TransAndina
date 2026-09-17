@@ -54,6 +54,7 @@ import com.transandina.flotilla.ui.components.ChipEstadoMantenimiento
 import com.transandina.flotilla.ui.components.ChipsFiltro
 import com.transandina.flotilla.ui.components.DatoEtiquetado
 import com.transandina.flotilla.ui.components.TarjetaMantenimiento
+import com.transandina.flotilla.ui.components.VisorFoto
 import com.transandina.flotilla.ui.components.EstadoVacio
 import com.transandina.flotilla.ui.components.GraficoLineaKilometraje
 import com.transandina.flotilla.ui.components.NivelEstado
@@ -129,6 +130,8 @@ private fun ContenidoDetalle(
     onEditarVehiculo: (String) -> Unit = {}
 ) {
     var pestana by rememberSaveable { mutableStateOf(pestanaInicial) }
+    // Foto de evidencia que se está viendo a pantalla completa.
+    var fotoAmpliada by rememberSaveable { mutableStateOf<String?>(null) }
     val vehiculo = uiState.vehiculo
 
     Column(
@@ -197,8 +200,10 @@ private fun ContenidoDetalle(
                         // formulario del conductor se conecta más adelante.
                         PestanaVehiculo.HISTORIAL -> PestanaHistorial(
                             mantenimientos = uiState.mantenimientos,
+                            fotosPorMantenimiento = uiState.fotosPorMantenimiento,
                             puedeRegistrar = esEncargado,
-                            onRegistrar = { onRegistrarMantenimiento(vehiculo.id) }
+                            onRegistrar = { onRegistrarMantenimiento(vehiculo.id) },
+                            onVerFoto = { fotoAmpliada = it }
                         )
 
                         PestanaVehiculo.KILOMETRAJE -> PestanaKilometraje(
@@ -218,6 +223,10 @@ private fun ContenidoDetalle(
                 }
             }
         }
+    }
+
+    fotoAmpliada?.let { url ->
+        VisorFoto(url = url, onCerrar = { fotoAmpliada = null })
     }
 }
 
@@ -310,8 +319,10 @@ private fun ColumnScope.PestanaInformacion(
 @Composable
 private fun ColumnScope.PestanaHistorial(
     mantenimientos: List<Mantenimiento>,
+    fotosPorMantenimiento: Map<String, List<String>>,
     puedeRegistrar: Boolean,
-    onRegistrar: () -> Unit
+    onRegistrar: () -> Unit,
+    onVerFoto: (String) -> Unit
 ) {
     var filtro by rememberSaveable { mutableStateOf<TipoMantenimiento?>(null) }
     val opciones = listOf(null, TipoMantenimiento.preventivo, TipoMantenimiento.correctivo)
@@ -344,7 +355,11 @@ private fun ColumnScope.PestanaHistorial(
     }
 
     visibles.forEach { mantenimiento ->
-        TarjetaMantenimiento(mantenimiento = mantenimiento)
+        TarjetaMantenimiento(
+            mantenimiento = mantenimiento,
+            fotos = fotosPorMantenimiento[mantenimiento.id].orEmpty(),
+            onVerFoto = onVerFoto
+        )
         Spacer(modifier = Modifier.height(12.dp))
     }
 }

@@ -1,5 +1,6 @@
 package com.transandina.flotilla.data.repository
 
+import com.transandina.flotilla.data.model.FotoMantenimiento
 import com.transandina.flotilla.data.model.FrecuenciaMantenimiento
 import com.transandina.flotilla.data.model.Mantenimiento
 import com.transandina.flotilla.data.model.NuevaFotoMantenimientoPayload
@@ -10,9 +11,13 @@ import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.storage
 import io.ktor.http.ContentType
 import java.util.UUID
+import kotlin.time.Duration.Companion.hours
 
 /** Bucket privado creado en la migración 202609152200. */
 private const val BUCKET_FOTOS = "mantenimientos"
+
+/** Cuánto vale una URL firmada de foto; alcanza de sobra para verla. */
+private val DURACION_URL_FOTO = 1.hours
 
 /**
  * Lectura y registro de `mantenimientos`, su catálogo
@@ -47,6 +52,31 @@ class MantenimientoRepository {
                 order("categoria", Order.ASCENDING)
             }
             .decodeList()
+    }
+
+    /**
+     * URLs temporales para ver las fotos de varios mantenimientos, agrupadas
+     * por mantenimiento. El bucket es privado: cada URL se firma y vence en
+     * [DURACION_URL_FOTO]. Si una foto ya no está en el bucket, se omite.
+     */
+    suspend fun obtenerFotos(mantenimientoIds: List<String>): Map<String, List<String>> {
+        if (mantenimientoIds.isEmpty()) return emptyMap()
+
+        val fotos: List<FotoMantenimiento> = SupabaseProvider.client.postgrest["mantenimiento_fotos"]
+            .select {
+                filter { isIn("mantenimiento_id", mantenimientoIds) }
+            }
+            .decodeList()
+        if (fotos.isEmpty()) return emptyMap()
+
+        val firmadas = SupabaseProvider.client.storage.from(BUCKET_FOTOS)
+            .createSignedUrls(DURACION_URL_FOTO, fotos.map { it.rutaArchivo })
+            .filter { it.error == null }
+            .associate { it.path to it.signedURL }
+
+        return fotos
+            .mapNotNull { foto -> firmadas[foto.rutaArchivo]?.let { foto.mantenimientoId to it } }
+            .groupBy({ (id, _) -> id }, { (_, url) -> url })
     }
 
     /** Inserta y devuelve la fila creada, que trae el id para asociar las fotos. */

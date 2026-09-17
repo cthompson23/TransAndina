@@ -25,6 +25,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.transandina.flotilla.data.model.RolUsuario
 import com.transandina.flotilla.di.SupabaseProvider
 import com.transandina.flotilla.ui.auth.LoginScreen
@@ -123,6 +126,12 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
         manejarPosibleDeepLink(intent)
+        // Coil necesita saber con qué cliente HTTP bajar las fotos del bucket.
+        SingletonImageLoader.setSafe { contexto ->
+            ImageLoader.Builder(contexto)
+                .components { add(OkHttpNetworkFetcherFactory()) }
+                .build()
+        }
         setContent {
             TransAndinaFlotillaTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
