@@ -280,7 +280,7 @@ Decisiones tomadas al implementar:
   - Campos además del Figma: **Taller** (obligatorio, es el "lugar") y **Descripción** (opcional). El **costo** es obligatorio, pero puede ser 0.
   - El kilometraje del servicio no puede ser mayor a la última lectura del vehículo, porque el odómetro solo sube. Si lo es, la pantalla ofrece registrar primero la lectura y al volver acepta el servicio.
   - Debajo se muestra el **próximo servicio estimado** de la categoría elegida.
-  - **Fotos**: hasta 3, JPG o PNG. Antes de subirlas se reducen a 1600 px y se guardan como JPEG en el bucket `mantenimientos`, con la ruta `<vehiculo>/<mantenimiento>/<uuid>.jpg`. Si una foto falla, el mantenimiento igual queda guardado y se avisa. Todavía no hay pantalla para ver las fotos.
+  - **Fotos**: hasta 3, JPG o PNG. Antes de subirlas se reducen a 1600 px y se guardan como JPEG en el bucket `mantenimientos`, con la ruta `<vehiculo>/<mantenimiento>/<uuid>.jpg`. Si una foto falla, el mantenimiento igual queda guardado y se avisa. Se ven como miniaturas en la pestaña Historial del vehículo y a pantalla completa al tocarlas; como el bucket es privado, cada foto se pide con una URL firmada que vence en una hora (Coil las carga).
 - **DocumentosVehiculo (`87:135`)**: se muestra también "Permiso de carga" (`vehiculos.fecha_permiso_carga`).
 
 ---
@@ -312,4 +312,5 @@ Decisiones de modelo:
 - **Talleres**: texto libre en `mantenimientos.taller`, sin tabla propia.
 - **Alertas**: las de documentos (vencido, por vencer) y las de mantenimiento (próximo, atrasado) se **calculan en la app** a partir de fechas, kilometraje y `frecuencias_mantenimiento`. En la tabla `alertas` quedan solo los avisos que ocurren una vez: reasignación, mantenimiento registrado y gerencia.
 - **Próximo mantenimiento**: último mantenimiento de la categoría + `km_frecuencia` o + `dias_frecuencia`, lo que ocurra primero.
-- **Reportes PDF**: se generan en el teléfono; no necesitan tablas.
+- **Reportes PDF**: se generan en el teléfono; no necesitan tablas. Se pueden compartir o guardar en la carpeta Descargas del propio teléfono (desde Android 10).
+- **Baja de vehículos**: `vehiculos.activo`. Un vehículo dado de baja sale de la flotilla activa, deja de generar alertas y se libera a su conductor con el mismo RPC de reasignación, para que quede el motivo en el historial. Se puede reactivar.
