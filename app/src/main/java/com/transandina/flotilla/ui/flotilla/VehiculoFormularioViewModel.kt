@@ -2,6 +2,7 @@ package com.transandina.flotilla.ui.flotilla
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.transandina.flotilla.data.model.ReasignarConductorParams
 import com.transandina.flotilla.data.model.TIPOS_VEHICULO
 import com.transandina.flotilla.data.model.VehiculoPayload
 import com.transandina.flotilla.data.repository.VehiculoRepository
@@ -26,6 +27,9 @@ data class VehiculoFormularioUiState(
     val fechaRevisionTecnica: LocalDate? = null,
     val fechaSeguro: LocalDate? = null,
     val fechaPermisoCarga: LocalDate? = null,
+    val activo: Boolean = true,
+    /** Con conductor asignado, darlo de baja también lo libera. */
+    val tieneConductor: Boolean = false,
     val cargando: Boolean = false,
     val guardando: Boolean = false,
     val error: String? = null,
@@ -65,6 +69,8 @@ class VehiculoFormularioViewModel(
                         fechaRevisionTecnica = parsearFechaIso(vehiculo.fechaRevisionTecnica),
                         fechaSeguro = parsearFechaIso(vehiculo.fechaSeguro),
                         fechaPermisoCarga = parsearFechaIso(vehiculo.fechaPermisoCarga),
+                        activo = vehiculo.activo,
+                        tieneConductor = vehiculo.conductorId != null,
                         cargando = false
                     )
                 }
@@ -130,6 +136,38 @@ class VehiculoFormularioViewModel(
                     vehiculoRepository.actualizarVehiculo(s.vehiculoId, datos)
                 }
                 _uiState.update { it.copy(guardando = false, guardado = true) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(guardando = false, error = mensajeDeError(e)) }
+            }
+        }
+    }
+
+    /**
+     * Da de baja el vehículo o lo reactiva. Al darlo de baja se libera al
+     * conductor con el mismo RPC de reasignación, para que quede en el
+     * historial por qué se quedó sin conductor.
+     */
+    fun cambiarActivo(activo: Boolean) {
+        val s = _uiState.value
+        val vehiculoId = s.vehiculoId ?: return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(guardando = true, error = null) }
+            try {
+                if (!activo && s.tieneConductor) {
+                    vehiculoRepository.reasignarConductor(
+                        ReasignarConductorParams(
+                            vehiculoId = vehiculoId,
+                            conductorNuevoId = null,
+                            fechaEfectiva = aFechaIso(LocalDate.now()),
+                            motivo = "Vehículo dado de baja"
+                        )
+                    )
+                }
+                vehiculoRepository.cambiarActivo(vehiculoId, activo)
+                _uiState.update {
+                    it.copy(guardando = false, activo = activo, tieneConductor = false, guardado = true)
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(guardando = false, error = mensajeDeError(e)) }
             }
