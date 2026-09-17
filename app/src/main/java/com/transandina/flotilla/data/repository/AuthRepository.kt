@@ -24,6 +24,26 @@ class AuthRepository {
         }
     }
 
+    /**
+     * Crea la cuenta de Auth de otra persona sin tocar la sesión actual y
+     * devuelve su id. Si Supabase exige confirmar el correo, `signUpWith`
+     * devuelve el usuario; si no, deja la sesión en el cliente temporal.
+     */
+    suspend fun crearCuentaParaOtraPersona(email: String, password: String): String {
+        val clienteTemporal = SupabaseProvider.crearClienteTemporal()
+        try {
+            val usuario = clienteTemporal.auth.signUpWith(Email) {
+                this.email = email
+                this.password = password
+            }
+            return usuario?.id
+                ?: clienteTemporal.auth.currentUserOrNull()?.id
+                ?: throw IllegalStateException("Supabase no devolvió el id de la cuenta nueva")
+        } finally {
+            clienteTemporal.close()
+        }
+    }
+
     suspend fun cerrarSesion() {
         SupabaseProvider.client.auth.signOut()
     }

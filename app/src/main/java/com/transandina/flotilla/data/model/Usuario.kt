@@ -7,6 +7,11 @@ enum class RolUsuario {
     conductor, mecanico, encargado
 }
 
+/** Coincide con el enum `estado_cuenta` de la base (migración 202609171900). */
+enum class EstadoCuenta {
+    activo, suspendido, desactivado
+}
+
 @Serializable
 data class Usuario(
     val id: String,
@@ -16,5 +21,6 @@ data class Usuario(
     val telefono: String? = null,
     @SerialName("licencia_conducir") val licenciaConducir: String? = null,
     val rol: RolUsuario,
-    val activo: Boolean = true
+    val activo: Boolean = true,
+    val estado: EstadoCuenta = EstadoCuenta.activo
 )

@@ -16,8 +16,17 @@ private val FORMATO_ISO: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
  * Se redondea a entero porque `km_actual` es numeric pero siempre se captura
  * sin decimales.
  */
-fun formatearKilometros(km: Double): String {
-    val entero = km.roundToLong()
+fun formatearKilometros(km: Double): String = agruparMiles(km)
+
+/** Igual que [formatearKilometros] pero con la unidad: "492 400 km". */
+fun formatearKilometrosConUnidad(km: Double): String = "${formatearKilometros(km)} km"
+
+/** Montos en colones sin decimales, como en el Figma: "₡ 45 000". */
+fun formatearColones(monto: Double): String = "₡ ${agruparMiles(monto)}"
+
+/** Redondea a entero y separa los miles con un espacio: 492400.0 → "492 400". */
+private fun agruparMiles(valor: Double): String {
+    val entero = valor.roundToLong()
     val signo = if (entero < 0) "-" else ""
     val digitos = abs(entero).toString()
 
@@ -29,9 +38,6 @@ fun formatearKilometros(km: Double): String {
 
     return signo + conSeparador
 }
-
-/** Igual que [formatearKilometros] pero con la unidad: "492 400 km". */
-fun formatearKilometrosConUnidad(km: Double): String = "${formatearKilometros(km)} km"
 
 /**
  * Pasa una fecha ISO de Supabase al formato de pantalla: "2026-08-25" →
