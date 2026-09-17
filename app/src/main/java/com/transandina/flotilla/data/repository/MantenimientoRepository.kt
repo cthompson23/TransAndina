@@ -2,14 +2,23 @@ package com.transandina.flotilla.data.repository
 
 import com.transandina.flotilla.data.model.FrecuenciaMantenimiento
 import com.transandina.flotilla.data.model.Mantenimiento
+import com.transandina.flotilla.data.model.NuevaFotoMantenimientoPayload
+import com.transandina.flotilla.data.model.NuevoMantenimientoPayload
 import com.transandina.flotilla.di.SupabaseProvider
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.storage.storage
+import io.ktor.http.ContentType
+import java.util.UUID
+
+/** Bucket privado creado en la migración 202609152200. */
+private const val BUCKET_FOTOS = "mantenimientos"
 
 /**
- * Lectura de `mantenimientos` y de su catálogo `frecuencias_mantenimiento`.
- * Qué filas vuelven lo decide `mantenimientos_select`: el encargado y el
- * mecánico ven todas; el conductor, solo las de su vehículo.
+ * Lectura y registro de `mantenimientos`, su catálogo
+ * `frecuencias_mantenimiento` y sus fotos. Qué filas vuelven y quién puede
+ * insertar lo deciden las políticas RLS (`mantenimientos_select`,
+ * `mantenimientos_insert`).
  */
 class MantenimientoRepository {
 
@@ -38,5 +47,25 @@ class MantenimientoRepository {
                 order("categoria", Order.ASCENDING)
             }
             .decodeList()
+    }
+
+    /** Inserta y devuelve la fila creada, que trae el id para asociar las fotos. */
+    suspend fun registrar(datos: NuevoMantenimientoPayload): Mantenimiento {
+        return SupabaseProvider.client.postgrest["mantenimientos"]
+            .insert(datos) { select() }
+            .decodeSingle()
+    }
+
+    /**
+     * Sube una foto JPEG y la asocia al mantenimiento. La ruta sigue la
+     * convención de las políticas del bucket: `<vehiculo>/<mantenimiento>/<uuid>.jpg`.
+     */
+    suspend fun subirFoto(vehiculoId: String, mantenimientoId: String, jpeg: ByteArray) {
+        val ruta = "$vehiculoId/$mantenimientoId/${UUID.randomUUID()}.jpg"
+        SupabaseProvider.client.storage.from(BUCKET_FOTOS).upload(ruta, jpeg) {
+            contentType = ContentType.Image.JPEG
+        }
+        SupabaseProvider.client.postgrest["mantenimiento_fotos"]
+            .insert(NuevaFotoMantenimientoPayload(mantenimientoId = mantenimientoId, rutaArchivo = ruta))
     }
 }

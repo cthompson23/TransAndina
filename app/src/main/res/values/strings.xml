@@ -201,6 +201,30 @@
     <string name="vehiculo_form_documentos">Vencimiento de documentos</string>
     <string name="vehiculo_form_documentos_ayuda">Opcional. Con estas fechas se calculan las alertas de documentos.</string>
 
+    <!-- Registrar mantenimiento (Figma 49:161) -->
+    <string name="mant_titulo">Registrar mantenimiento</string>
+    <string name="mant_tipo_marcador">Preventivo / Correctivo</string>
+    <string name="mant_categoria_marcador">Seleccione la categoría</string>
+    <string name="mant_sin_categorias">No hay categorías configuradas para este tipo de vehículo. Revise la tabla frecuencias_mantenimiento.</string>
+    <string name="mant_km">Kilometraje del servicio</string>
+    <string name="mant_km_ayuda">Kilometraje actual del vehículo: %1$s</string>
+    <string name="mant_taller_marcador">Nombre del taller o lugar</string>
+    <string name="mant_responsable_marcador">Nombre del responsable</string>
+    <string name="mant_costo_marcador">₡ 0,00</string>
+    <string name="mant_descripcion">Descripción (opcional)</string>
+    <string name="mant_descripcion_marcador">Qué se hizo en el servicio</string>
+    <string name="mant_fotos">Evidencia fotográfica</string>
+    <string name="mant_adjuntar">Adjuntar fotografía</string>
+    <string name="mant_fotos_ayuda">Formatos JPG o PNG, máximo 5 MB · Fotos: %1$d/%2$d</string>
+    <string name="mant_foto_peso">%1$d KB</string>
+    <string name="mant_foto_generica">Foto %1$d</string>
+    <string name="mant_quitar_foto">Quitar foto</string>
+    <string name="mant_foto_formato_invalido">Solo se pueden adjuntar fotos JPG o PNG</string>
+    <string name="mant_foto_no_se_pudo_leer">No se pudo leer una de las fotos</string>
+    <string name="mant_fotos_fallidas">El mantenimiento se guardó, pero hubo fotos que no se pudieron subir (%1$d)</string>
+    <string name="mant_estimado_titulo">Próximo servicio estimado</string>
+    <string name="mant_estimado_sin_frecuencia">Esta categoría no tiene una frecuencia definida</string>
+
     <!-- Reasignación de conductor (Figma 102:318) -->
     <string name="reasignar_titulo">Reasignar conductor</string>
     <string name="reasignar_aviso">El conductor anterior pierde el acceso al vehículo y ambos reciben una notificación.</string>

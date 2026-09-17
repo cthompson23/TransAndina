@@ -25,6 +25,32 @@ data class Mantenimiento(
 )
 
 /**
+ * Lo que se inserta al registrar un mantenimiento (Figma `49:161`). Sin
+ * valores por defecto para que los null viajen explícitos (el serializador de
+ * Supabase omite los campos que tienen su valor por defecto).
+ */
+@Serializable
+data class NuevoMantenimientoPayload(
+    @SerialName("vehiculo_id") val vehiculoId: String,
+    @SerialName("registrado_por") val registradoPor: String,
+    val tipo: TipoMantenimiento,
+    val categoria: String,
+    val fecha: String,
+    val km: Double,
+    val responsable: String?,
+    val descripcion: String?,
+    val costo: Double,
+    val taller: String
+)
+
+/** Fila de `mantenimiento_fotos`: apunta a un archivo del bucket `mantenimientos`. */
+@Serializable
+data class NuevaFotoMantenimientoPayload(
+    @SerialName("mantenimiento_id") val mantenimientoId: String,
+    @SerialName("storage_path") val rutaArchivo: String
+)
+
+/**
  * Fila de `frecuencias_mantenimiento`: cada cuánto toca una categoría según
  * el tipo de vehículo. También sirve de catálogo de categorías.
  */

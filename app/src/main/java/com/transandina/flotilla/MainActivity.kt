@@ -39,6 +39,7 @@ import com.transandina.flotilla.ui.flotilla.ReasignacionScreen
 import com.transandina.flotilla.ui.flotilla.VehiculoFormularioScreen
 import com.transandina.flotilla.ui.home.HomeScreen
 import com.transandina.flotilla.ui.mantenimiento.MantenimientoScreen
+import com.transandina.flotilla.ui.mantenimiento.RegistrarMantenimientoScreen
 import com.transandina.flotilla.ui.navigation.BottomNavItem
 import com.transandina.flotilla.ui.navigation.itemsParaRol
 import com.transandina.flotilla.ui.notificaciones.NotificacionesScreen
@@ -66,6 +67,7 @@ private const val RUTA_REGISTRAR_KILOMETRAJE = "registrar-kilometraje/{$ARG_VEHI
 // Rutas del encargado que no son pestañas (docs/ADAPTACION_MOVIL.md §5).
 private const val ARG_USUARIO_ID = "usuarioId"
 private const val RUTA_REASIGNAR = "reasignar/{$ARG_VEHICULO_ID}"
+private const val RUTA_REGISTRAR_MANTENIMIENTO = "registrar-mantenimiento/{$ARG_VEHICULO_ID}"
 private const val RUTA_VEHICULO_NUEVO = "vehiculo-nuevo"
 private const val RUTA_VEHICULO_EDITAR = "vehiculo-editar/{$ARG_VEHICULO_ID}"
 private const val RUTA_ESTADO_CUENTA = "estado-cuenta/{$ARG_USUARIO_ID}"
@@ -85,6 +87,8 @@ private fun rutaRegistrarKilometraje(vehiculoId: String) =
     "registrar-kilometraje/$vehiculoId"
 
 private fun rutaReasignar(vehiculoId: String) = "reasignar/$vehiculoId"
+
+private fun rutaRegistrarMantenimiento(vehiculoId: String) = "registrar-mantenimiento/$vehiculoId"
 
 private fun rutaVehiculoEditar(vehiculoId: String) = "vehiculo-editar/$vehiculoId"
 
@@ -283,6 +287,9 @@ private fun AppNavigation(
                     onRegistrarKilometraje = { id ->
                         navController.navigate(rutaRegistrarKilometraje(id))
                     },
+                    onRegistrarMantenimiento = { id ->
+                        navController.navigate(rutaRegistrarMantenimiento(id))
+                    },
                     onReasignarConductor = { id -> navController.navigate(rutaReasignar(id)) },
                     onEditarVehiculo = { id -> navController.navigate(rutaVehiculoEditar(id)) }
                 )
@@ -336,6 +343,13 @@ private fun AppNavigation(
                     vehiculoId = entrada.arguments?.getString(ARG_VEHICULO_ID).orEmpty(),
                     onAtras = { navController.popBackStack() },
                     onReasignado = { navController.volverYRecargar() }
+                )
+            }
+            composable(RUTA_REGISTRAR_MANTENIMIENTO) { entrada ->
+                RegistrarMantenimientoScreen(
+                    vehiculoId = entrada.arguments?.getString(ARG_VEHICULO_ID).orEmpty(),
+                    onAtras = { navController.popBackStack() },
+                    onGuardado = { navController.volverYRecargar() }
                 )
             }
             composable(RUTA_VEHICULO_NUEVO) {

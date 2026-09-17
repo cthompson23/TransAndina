@@ -168,6 +168,20 @@ class EstadoMantenimientoTest {
     }
 
     @Test
+    fun `el siguiente servicio suma la frecuencia al servicio registrado`() {
+        val estimado = estimarSiguienteServicio(aceite, LocalDate.of(2026, 9, 17), 492_400.0)!!
+
+        assertEquals(497_400.0, estimado.kmObjetivo!!, 0.0)
+        assertEquals(LocalDate.of(2027, 3, 16), estimado.fechaObjetivo)
+    }
+
+    @Test
+    fun `una categoria sin frecuencia no tiene siguiente servicio`() {
+        val otro = aceite.copy(categoria = "Otro", kmFrecuencia = null, diasFrecuencia = null)
+        assertEquals(null, estimarSiguienteServicio(otro, hoy, 1_000.0))
+    }
+
+    @Test
     fun `un vehiculo sin fechas ni mantenimientos esta al dia`() {
         val resumen = resumirVehiculo(
             vehiculo = vehiculo(kmActual = 0.0),

@@ -87,6 +87,7 @@ fun VehiculoDetalleScreen(
     esEncargado: Boolean = false,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (vehiculoId: String) -> Unit = {},
+    onRegistrarMantenimiento: (vehiculoId: String) -> Unit = {},
     onReasignarConductor: (vehiculoId: String) -> Unit = {},
     onEditarVehiculo: (vehiculoId: String) -> Unit = {},
     tokenRecarga: Int = 0
@@ -104,6 +105,7 @@ fun VehiculoDetalleScreen(
         esEncargado = esEncargado,
         onAtras = onAtras,
         onRegistrarKilometraje = onRegistrarKilometraje,
+        onRegistrarMantenimiento = onRegistrarMantenimiento,
         onReasignarConductor = onReasignarConductor,
         onEditarVehiculo = onEditarVehiculo
     )
@@ -117,6 +119,7 @@ private fun ContenidoDetalle(
     esEncargado: Boolean = false,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (String) -> Unit = {},
+    onRegistrarMantenimiento: (String) -> Unit = {},
     onReasignarConductor: (String) -> Unit = {},
     onEditarVehiculo: (String) -> Unit = {}
 ) {
@@ -185,8 +188,12 @@ private fun ContenidoDetalle(
                             onEditarVehiculo = { onEditarVehiculo(vehiculo.id) }
                         )
 
+                        // Por ahora solo el encargado registra desde aquí; el
+                        // formulario del conductor se conecta más adelante.
                         PestanaVehiculo.HISTORIAL -> PestanaHistorial(
-                            mantenimientos = uiState.mantenimientos
+                            mantenimientos = uiState.mantenimientos,
+                            puedeRegistrar = esEncargado,
+                            onRegistrar = { onRegistrarMantenimiento(vehiculo.id) }
                         )
 
                         PestanaVehiculo.KILOMETRAJE -> PestanaKilometraje(
@@ -296,9 +303,22 @@ private fun ColumnScope.PestanaInformacion(
 
 /** Historial con filtro por tipo (Figma `51:125`, `102:178`). */
 @Composable
-private fun ColumnScope.PestanaHistorial(mantenimientos: List<Mantenimiento>) {
+private fun ColumnScope.PestanaHistorial(
+    mantenimientos: List<Mantenimiento>,
+    puedeRegistrar: Boolean,
+    onRegistrar: () -> Unit
+) {
     var filtro by rememberSaveable { mutableStateOf<TipoMantenimiento?>(null) }
     val opciones = listOf(null, TipoMantenimiento.preventivo, TipoMantenimiento.correctivo)
+
+    if (puedeRegistrar) {
+        BotonPrimario(
+            texto = stringResource(R.string.mant_titulo),
+            onClick = onRegistrar,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+    }
 
     ChipsFiltro(
         opciones = listOf(

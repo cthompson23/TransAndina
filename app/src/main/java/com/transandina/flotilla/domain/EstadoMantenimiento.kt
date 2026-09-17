@@ -31,6 +31,26 @@ data class ProximoMantenimiento(
     val estado: EstadoMantenimiento
 )
 
+/** Cuándo tocaría el siguiente servicio; cualquiera de los dos puede faltar. */
+data class ServicioEstimado(val kmObjetivo: Double?, val fechaObjetivo: LocalDate?)
+
+/**
+ * Siguiente servicio de una categoría si el último se hizo en [fecha] a [km].
+ * Es la estimación que muestra el formulario al registrar un mantenimiento.
+ * Devuelve null si la frecuencia no define ni kilómetros ni días.
+ */
+fun estimarSiguienteServicio(
+    frecuencia: FrecuenciaMantenimiento,
+    fecha: LocalDate,
+    km: Double
+): ServicioEstimado? {
+    if (frecuencia.kmFrecuencia == null && frecuencia.diasFrecuencia == null) return null
+    return ServicioEstimado(
+        kmObjetivo = frecuencia.kmFrecuencia?.let { km + it },
+        fechaObjetivo = frecuencia.diasFrecuencia?.let { fecha.plusDays(it.toLong()) }
+    )
+}
+
 /**
  * Calcula el próximo servicio de cada categoría con frecuencia definida para
  * el tipo del vehículo. Solo se consideran las categorías que ya tienen al
@@ -54,13 +74,13 @@ fun calcularProximosMantenimientos(
 
     return frecuencias
         .filter { it.tipoVehiculo == tipoVehiculo }
-        .filter { it.kmFrecuencia != null || it.diasFrecuencia != null }
         .mapNotNull { frecuencia ->
             val (ultimo, ultimaFecha) = ultimoPorCategoria[frecuencia.categoria]
                 ?: return@mapNotNull null
+            val (kmObjetivo, fechaObjetivo) =
+                estimarSiguienteServicio(frecuencia, ultimaFecha, ultimo.km)
+                    ?: return@mapNotNull null
 
-            val kmObjetivo = frecuencia.kmFrecuencia?.let { ultimo.km + it }
-            val fechaObjetivo = frecuencia.diasFrecuencia?.let { ultimaFecha.plusDays(it.toLong()) }
             val kmRestantes = kmObjetivo?.let { it - kmActual }
             val diasRestantes = fechaObjetivo?.let { ChronoUnit.DAYS.between(hoy, it) }
 
