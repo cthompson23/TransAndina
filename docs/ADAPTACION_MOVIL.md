@@ -146,7 +146,7 @@ Nota: el Figma dice "Trasandina" en el logo del login; es un error de tipeo, se 
 | Pestaña | Ícono | Contiene |
 |---|---|---|
 | Flotilla | `Dashboard` | EstadoVehiculos → toca un vehículo → **Detalle de vehículo** (HistorialVehiculo + Reasignar) |
-| Alertas | `Notifications` | PanelAlertas → toca una alerta → Detalle de vehículo |
+| Alertas | `NotificationImportant` | PanelAlertas → toca una alerta → Detalle de vehículo |
 | Reportes | `Assessment` | Filtros → ReporteGenerado |
 | Usuarios | `People` | ConsultaUsuarios → ControlEstadoCuentas; FAB → RegistroAdministrador |
 | Perfil | `Person` | Perfil existente |
@@ -222,6 +222,36 @@ Así se pasa de 6 a 5 pestañas sin perder ninguna función.
 - La fecha efectiva es informativa: el cambio se aplica en el momento.
 - La base rechaza a un conductor que no esté activo o que ya tenga un vehículo.
 - Los dos conductores, el anterior y el nuevo, reciben una alerta automática.
+
+### Implementación (17/09/2026)
+
+| Pantalla | Archivo | Ruta |
+|---|---|---|
+| Flotilla | `ui/flotilla/FlotillaScreen.kt` | pestaña `estado` |
+| Registrar / editar vehículo | `ui/flotilla/VehiculoFormularioScreen.kt` | `vehiculo-nuevo`, `vehiculo-editar/{id}` |
+| Detalle (vista encargado) | `ui/vehiculo/VehiculoDetalleScreen.kt` con `esEncargado = true` | `vehiculo-detalle/{id}/{pestaña}` |
+| Reasignación | `ui/flotilla/ReasignacionScreen.kt` | `reasignar/{id}` |
+| Alertas | `ui/alertas/AlertasFlotillaScreen.kt` | pestaña `alertas-flotilla` |
+| Enviar aviso de gerencia | `ui/alertas/EnviarAvisoScreen.kt` | `enviar-aviso` |
+| Reportes + PDF | `ui/reportes/ReportesScreen.kt`, `ExportadorPdfReporte.kt` | pestaña `reportes` |
+| Usuarios | `ui/usuarios/UsuariosScreen.kt` | pestaña `usuarios` |
+| Estado de la cuenta | `ui/usuarios/EstadoCuentaScreen.kt` | `estado-cuenta/{id}` |
+| Registrar administrador | `ui/usuarios/RegistrarAdministradorScreen.kt` | `registrar-administrador` |
+
+Decisiones tomadas al implementar:
+
+- **Detalle del vehículo**: se reutiliza la pantalla del conductor con sus 4 pestañas, en lugar de crear una de 2. El encargado ve además el conductor asignado y los botones "Reasignar conductor" y "Editar vehículo". No ve "Registrar kilometraje", porque solo lo puede hacer el conductor (RLS).
+- **Estado de cada vehículo** en Flotilla: se toma el peor entre el estado del mantenimiento y el de los documentos. Un documento vencido cuenta como "Atrasado".
+- **KPI** "Mant. pendientes": cuenta los vehículos con mantenimiento próximo o atrasado.
+- **Reglas de las alertas** (`domain/AlertasFlotilla.kt`):
+  - Crítica: documento vencido o que vence en 7 días o menos, y mantenimiento atrasado.
+  - Próxima: documento que vence en menos de 15 días, y mantenimiento a 1 000 km o 15 días.
+  - Informativa: reasignaciones de los últimos 30 días.
+- **Próximo mantenimiento**: solo se calcula para las categorías con al menos un servicio registrado.
+- **Registrar vehículo** incluye las cuatro fechas de documentos, que son opcionales. Es la única forma de cargarlas.
+- **Aviso de gerencia**: no tiene frame en el Figma. Es un formulario con destinatario (todos los conductores, todas las cuentas o una persona) y mensaje. Se entra desde el botón flotante de Alertas.
+- **Desactivado** usa un chip gris (`EstadoNeutro`), como en el Figma `102:258`.
+- **PDF**: tamaño carta, generado con `android.graphics.pdf` y compartido con `FileProvider` (autoridad `${applicationId}.archivos`).
 
 ---
 
