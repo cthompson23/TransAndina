@@ -37,18 +37,14 @@ import com.transandina.flotilla.domain.MotivoAlerta
 import com.transandina.flotilla.domain.NivelAlerta
 import com.transandina.flotilla.domain.ProximoMantenimiento
 import com.transandina.flotilla.domain.TipoDocumento
-import com.transandina.flotilla.domain.UMBRAL_KM_PROXIMO
 import com.transandina.flotilla.domain.formatearFecha
-import com.transandina.flotilla.domain.formatearKilometrosConUnidad
 import com.transandina.flotilla.ui.components.BotonFlotante
 import com.transandina.flotilla.ui.components.ChipsFiltro
 import com.transandina.flotilla.ui.components.EstadoVacio
-import com.transandina.flotilla.ui.components.NivelEstado
 import com.transandina.flotilla.ui.components.TarjetaAlerta
 import com.transandina.flotilla.ui.components.TransAndinaTopBar
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
 import java.time.LocalDate
-import kotlin.math.abs
 
 /** Orden de los chips: "Todas" primero (docs/ADAPTACION_MOVIL.md §6). */
 private val FILTROS: List<NivelAlerta?> =
@@ -179,116 +175,6 @@ private fun etiquetaFiltro(nivel: NivelAlerta?): String = when (nivel) {
     NivelAlerta.CRITICA -> stringResource(R.string.alertas_filtro_criticas)
     NivelAlerta.PROXIMA -> stringResource(R.string.alertas_filtro_proximas)
     NivelAlerta.INFORMATIVA -> stringResource(R.string.alertas_filtro_informativas)
-}
-
-@Composable
-private fun etiquetaNivel(nivel: NivelAlerta): String = when (nivel) {
-    NivelAlerta.CRITICA -> stringResource(R.string.alerta_nivel_critica)
-    NivelAlerta.PROXIMA -> stringResource(R.string.alerta_nivel_proxima)
-    NivelAlerta.INFORMATIVA -> stringResource(R.string.alerta_nivel_informativa)
-}
-
-private fun nivelVisual(nivel: NivelAlerta): NivelEstado = when (nivel) {
-    NivelAlerta.CRITICA -> NivelEstado.CRITICO
-    NivelAlerta.PROXIMA -> NivelEstado.AVISO
-    NivelAlerta.INFORMATIVA -> NivelEstado.INFO
-}
-
-@Composable
-private fun tituloAlerta(motivo: MotivoAlerta): String = when (motivo) {
-    is MotivoAlerta.DocumentoVencido -> when (motivo.documento) {
-        TipoDocumento.MARCHAMO -> stringResource(R.string.alerta_vencido_marchamo)
-        TipoDocumento.REVISION_TECNICA -> stringResource(R.string.alerta_vencido_revision)
-        TipoDocumento.SEGURO -> stringResource(R.string.alerta_vencido_seguro)
-        TipoDocumento.PERMISO_CARGA -> stringResource(R.string.alerta_vencido_permiso)
-    }
-    is MotivoAlerta.DocumentoPorVencer -> when (motivo.documento) {
-        TipoDocumento.MARCHAMO -> stringResource(R.string.alerta_por_vencer_marchamo)
-        TipoDocumento.REVISION_TECNICA -> stringResource(R.string.alerta_por_vencer_revision)
-        TipoDocumento.SEGURO -> stringResource(R.string.alerta_por_vencer_seguro)
-        TipoDocumento.PERMISO_CARGA -> stringResource(R.string.alerta_por_vencer_permiso)
-    }
-    is MotivoAlerta.MantenimientoAtrasado -> stringResource(R.string.alerta_mantenimiento_atrasado)
-    is MotivoAlerta.MantenimientoProximo -> stringResource(R.string.alerta_mantenimiento_proximo)
-    is MotivoAlerta.ConductorReasignado -> stringResource(R.string.alerta_reasignacion)
-}
-
-@Composable
-private fun detalleAlerta(alerta: AlertaFlotilla): String {
-    val vehiculo = alerta.vehiculo
-    val nombreVehiculo = "${vehiculo.marca} ${vehiculo.modelo}"
-    return when (val motivo = alerta.motivo) {
-        is MotivoAlerta.DocumentoVencido -> stringResource(
-            R.string.alerta_detalle_vencio,
-            vehiculo.placa,
-            nombreVehiculo,
-            formatearFecha(motivo.fecha)
-        )
-
-        is MotivoAlerta.DocumentoPorVencer -> stringResource(
-            R.string.alerta_detalle_vence,
-            vehiculo.placa,
-            nombreVehiculo,
-            formatearFecha(motivo.fecha)
-        )
-
-        is MotivoAlerta.MantenimientoAtrasado -> {
-            val proximo = motivo.proximo
-            val kmPasados = proximo.kmRestantes?.takeIf { it <= 0 }
-            val fecha = proximo.fechaObjetivo
-            when {
-                fecha != null && (proximo.diasRestantes ?: 0) < 0 -> stringResource(
-                    R.string.alerta_detalle_atrasado_fecha,
-                    vehiculo.placa,
-                    proximo.categoria,
-                    formatearFecha(fecha)
-                )
-                kmPasados != null -> stringResource(
-                    R.string.alerta_detalle_atrasado_km,
-                    vehiculo.placa,
-                    proximo.categoria,
-                    formatearKilometrosConUnidad(abs(kmPasados))
-                )
-                else -> "${vehiculo.placa} · ${proximo.categoria}"
-            }
-        }
-
-        is MotivoAlerta.MantenimientoProximo -> {
-            val proximo = motivo.proximo
-            val kmRestantes = proximo.kmRestantes
-            val fecha = proximo.fechaObjetivo
-            when {
-                kmRestantes != null && kmRestantes <= UMBRAL_KM_PROXIMO -> stringResource(
-                    R.string.alerta_detalle_proximo_km,
-                    vehiculo.placa,
-                    proximo.categoria,
-                    formatearKilometrosConUnidad(kmRestantes)
-                )
-                fecha != null -> stringResource(
-                    R.string.alerta_detalle_proximo_fecha,
-                    vehiculo.placa,
-                    proximo.categoria,
-                    formatearFecha(fecha)
-                )
-                else -> "${vehiculo.placa} · ${proximo.categoria}"
-            }
-        }
-
-        is MotivoAlerta.ConductorReasignado -> motivo.nombreConductorNuevo
-            ?.let {
-                stringResource(
-                    R.string.alerta_detalle_reasignado,
-                    vehiculo.placa,
-                    it,
-                    formatearFecha(motivo.fecha)
-                )
-            }
-            ?: stringResource(
-                R.string.alerta_detalle_sin_conductor,
-                vehiculo.placa,
-                formatearFecha(motivo.fecha)
-            )
-    }
 }
 
 @Preview(name = "Alertas de la flotilla", showBackground = true, heightDp = 900)

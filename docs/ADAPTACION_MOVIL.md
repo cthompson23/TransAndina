@@ -139,6 +139,12 @@ Nota: el Figma dice "Trasandina" en el logo del login; es un error de tipeo, se 
 
 **Conductor** (sin cambios en estructura): Inicio · Vehículo · Mantenimiento · Notificaciones · Perfil
 
+La pestaña **Mantenimiento** del conductor es directamente el formulario de
+registro (`49:161`), sobre su vehículo asignado: en el Figma esa pantalla se
+dibuja con la barra inferior. El historial se consulta en Vehículo → Historial.
+Un conductor tiene **un solo vehículo** asignado (decidido el 17/09/2026); la
+función `reasignar_conductor` lo garantiza.
+
 **Mecánico** (sin cambios): Inicio · Mantenimiento · Notificaciones · Perfil
 
 **Encargado** (antes 6 pestañas, ahora 5):
@@ -237,7 +243,7 @@ Así se pasa de 6 a 5 pestañas sin perder ninguna función.
 | Registrar / editar vehículo | `ui/flotilla/VehiculoFormularioScreen.kt` | `vehiculo-nuevo`, `vehiculo-editar/{id}` |
 | Detalle (vista encargado) | `ui/vehiculo/VehiculoDetalleScreen.kt` con `esEncargado = true` | `vehiculo-detalle/{id}/{pestaña}` |
 | Reasignación | `ui/flotilla/ReasignacionScreen.kt` | `reasignar/{id}` |
-| Registrar mantenimiento | `ui/mantenimiento/RegistrarMantenimientoScreen.kt` (botón en la pestaña Historial del detalle) | `registrar-mantenimiento/{id}` |
+| Registrar mantenimiento | `ui/mantenimiento/RegistrarMantenimientoScreen.kt` (botón en la pestaña Historial del detalle; también es la pestaña Mantenimiento del conductor, con `enPestana = true`) | `registrar-mantenimiento/{id}` |
 | Alertas | `ui/alertas/AlertasFlotillaScreen.kt` | pestaña `alertas-flotilla` |
 | Enviar aviso de gerencia | `ui/alertas/EnviarAvisoScreen.kt` | `enviar-aviso` |
 | Reportes + PDF | `ui/reportes/ReportesScreen.kt`, `ExportadorPdfReporte.kt` | pestaña `reportes` |
@@ -267,6 +273,7 @@ Decisiones tomadas al implementar:
 - **MenuVehiculo (`70:133`)**: la opción "Registrar vehículo" solo aparece para el encargado.
 - **DocumentosVehiculo (`87:135`)**: cambiar el texto "desde la plataforma web" por "Los documentos los carga el encargado de flota".
 - **Alertas del conductor (`28:312`)**: el título del Figma dice "Datos personales" por error; usar "Mis alertas".
+  Mezcla dos fuentes: las alertas calculadas de su vehículo (documentos y mantenimientos, mismas reglas y textos que el panel del encargado) y los avisos guardados en la tabla `alertas` (gerencia, reasignaciones y mantenimientos registrados), que llevan la fecha en que llegaron. Tocar una alerta abre la pestaña del vehículo que corresponde.
 - **Registro (`1:370`)**: el selector de rol solo ofrece Conductor y Mecánico.
 - **RegistroMantenimiento (`49:161`)**: se agrega el campo obligatorio **"Kilometraje del servicio"**, que no está en el Figma y se precarga con el kilometraje actual del vehículo. La base lo exige (`mantenimientos.km`) y hace falta para estimar el próximo mantenimiento (decidido el 17/09/2026). Las categorías se leen de `frecuencias_mantenimiento` según el tipo de vehículo.
   - Lo pueden registrar el **encargado** (sobre cualquier vehículo, decidido el 17/09/2026) y el conductor (sobre el suyo). La pantalla es la misma; por ahora solo está conectada para el encargado, desde la pestaña Historial del detalle.
