@@ -7,10 +7,9 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.NotificationImportant
 import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.transandina.flotilla.data.model.RolUsuario
 
@@ -20,11 +19,13 @@ sealed class BottomNavItem(val ruta: String, val etiqueta: String, val icono: Im
     object Mantenimiento : BottomNavItem("mantenimiento", "", Icons.Filled.Build)
     object Notificaciones : BottomNavItem("notificaciones", "", Icons.Filled.Notifications)
     object Perfil : BottomNavItem("perfil", "", Icons.Filled.Person)
+
+    // Encargado (docs/ADAPTACION_MOVIL.md §5). "Historial por vehículo" y
+    // "Reasignación" ya no son pestañas: se entra desde el detalle del vehículo.
     object Estado : BottomNavItem("estado", "", Icons.Filled.Dashboard)
-    object Historial : BottomNavItem("historial", "", Icons.Filled.History)
-    object Reportes : BottomNavItem("resportes", "", Icons.Filled.Assessment)
+    object AlertasFlotilla : BottomNavItem("alertas-flotilla", "", Icons.Filled.NotificationImportant)
+    object Reportes : BottomNavItem("reportes", "", Icons.Filled.Assessment)
     object Usuarios : BottomNavItem("usuarios", "", Icons.Filled.People)
-    object Reasignacion : BottomNavItem("reasignacion", "", Icons.Filled.SwapHoriz)
 }
 
 /**
@@ -35,8 +36,8 @@ sealed class BottomNavItem(val ruta: String, val etiqueta: String, val icono: Im
  * - conductor: tiene un vehículo propio asignado, así que ve su detalle.
  * - mecánico: no tiene "un" vehículo, trabaja sobre cualquiera, así que
  *   no tiene sentido la pestaña Vehículo individual.
- * - encargado: gestiona la flotilla completa, no registra mantenimientos
- *   él mismo, así que tampoco ve esa pestaña (por ahora).
+ * - encargado: gestiona la flotilla completa y no registra mantenimientos
+ *   él mismo: Flotilla · Alertas · Reportes · Usuarios · Perfil.
  */
 fun itemsParaRol(rol: RolUsuario): List<BottomNavItem> = when (rol) {
     RolUsuario.conductor -> listOf(
@@ -54,10 +55,9 @@ fun itemsParaRol(rol: RolUsuario): List<BottomNavItem> = when (rol) {
     )
     RolUsuario.encargado -> listOf(
         BottomNavItem.Estado,
-        BottomNavItem.Historial,
+        BottomNavItem.AlertasFlotilla,
         BottomNavItem.Reportes,
         BottomNavItem.Usuarios,
-        BottomNavItem.Reasignacion,
         BottomNavItem.Perfil
     )
 }

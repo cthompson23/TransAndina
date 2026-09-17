@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Carpetas que FileProvider puede compartir. Solo los reportes generados. -->
+<paths>
+    <cache-path
+        name="reportes"
+        path="reportes/" />
+</paths>
