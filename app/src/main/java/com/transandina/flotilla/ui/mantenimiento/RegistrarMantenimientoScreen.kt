@@ -80,12 +80,19 @@ import java.time.LocalDate
  * Registrar mantenimiento (Figma `49:161`). Además de los campos del Figma
  * pide el kilometraje del servicio, el taller y una descripción
  * (docs/ADAPTACION_MOVIL.md §7), y muestra cuándo tocaría el siguiente.
+ *
+ * Sirve para los dos casos: el encargado entra desde el detalle de un vehículo
+ * (con [vehiculoId] y flecha de atrás), y el conductor la ve como su pestaña
+ * Mantenimiento, sobre su vehículo asignado ([enPestana]).
+ *
+ * @param vehiculoId null = el vehículo asignado a quien tiene la sesión.
  */
 @Composable
 fun RegistrarMantenimientoScreen(
-    vehiculoId: String,
+    vehiculoId: String? = null,
     viewModel: RegistrarMantenimientoViewModel = viewModel(),
     tokenRecarga: Int = 0,
+    enPestana: Boolean = false,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (vehiculoId: String) -> Unit = {},
     onGuardado: () -> Unit = {}
@@ -118,7 +125,9 @@ fun RegistrarMantenimientoScreen(
                 Toast.LENGTH_LONG
             ).show()
         }
-        onGuardado()
+        // En la pestaña no hay a dónde volver: se limpia el formulario y se
+        // deja el aviso de que quedó registrado.
+        if (enPestana) viewModel.limpiarFormulario(conservarAviso = true) else onGuardado()
     }
 
     // El selector del sistema no pide permisos de almacenamiento.
@@ -153,6 +162,7 @@ fun RegistrarMantenimientoScreen(
     ContenidoRegistrarMantenimiento(
         uiState = uiState,
         preparandoFotos = preparandoFotos,
+        enPestana = enPestana,
         acciones = AccionesMantenimiento(
             onTipo = viewModel::onTipoChange,
             onCategoria = viewModel::onCategoriaChange,
@@ -170,7 +180,7 @@ fun RegistrarMantenimientoScreen(
             onQuitarFoto = viewModel::onFotoQuitada,
             onRegistrarKilometraje = { uiState.vehiculo?.let { onRegistrarKilometraje(it.id) } },
             onGuardar = viewModel::guardar,
-            onCancelar = onAtras
+            onCancelar = { if (enPestana) viewModel.limpiarFormulario() else onAtras() }
         )
     )
 }
@@ -195,6 +205,7 @@ private data class AccionesMantenimiento(
 private fun ContenidoRegistrarMantenimiento(
     uiState: RegistrarMantenimientoUiState,
     preparandoFotos: Boolean,
+    enPestana: Boolean = false,
     acciones: AccionesMantenimiento
 ) {
     val vehiculo = uiState.vehiculo
@@ -208,7 +219,8 @@ private fun ContenidoRegistrarMantenimiento(
         TransAndinaTopBar(
             titulo = stringResource(R.string.mant_titulo),
             subtitulo = vehiculo?.let { "${it.placa} · ${it.marca} ${it.modelo}" },
-            onAtras = acciones.onCancelar
+            // En la pestaña del conductor no hay pantalla anterior.
+            onAtras = if (enPestana) null else acciones.onCancelar
         )
 
         when {
@@ -220,7 +232,13 @@ private fun ContenidoRegistrarMantenimiento(
             }
 
             vehiculo == null -> Box(modifier = Modifier.padding(16.dp)) {
-                EstadoVacio(mensaje = uiState.error ?: stringResource(R.string.detalle_no_encontrado))
+                EstadoVacio(
+                    mensaje = uiState.error ?: if (enPestana) {
+                        stringResource(R.string.vehiculo_sin_asignar)
+                    } else {
+                        stringResource(R.string.detalle_no_encontrado)
+                    }
+                )
             }
 
             else -> Column(
@@ -361,13 +379,27 @@ private fun ContenidoRegistrarMantenimiento(
                     )
                 }
 
+                // En la pestaña no se sale de la pantalla al guardar, así que
+                // el aviso de que quedó registrado se muestra aquí.
+                if (enPestana && uiState.guardado) {
+                    Text(
+                        text = stringResource(R.string.mant_guardado),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TransAndinaTheme.colores.estadoOk
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(4.dp))
 
                 FilaBotonesFormulario(
                     textoAccion = stringResource(R.string.guardar),
                     onAccion = acciones.onGuardar,
                     onCancelar = acciones.onCancelar,
-                    textoCancelar = stringResource(R.string.cancelar),
+                    textoCancelar = if (enPestana) {
+                        stringResource(R.string.limpiar)
+                    } else {
+                        stringResource(R.string.cancelar)
+                    },
                     accionHabilitada = !preparandoFotos,
                     cargando = uiState.guardando
                 )

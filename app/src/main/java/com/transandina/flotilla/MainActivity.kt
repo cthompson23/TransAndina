@@ -38,7 +38,6 @@ import com.transandina.flotilla.ui.flotilla.FlotillaScreen
 import com.transandina.flotilla.ui.flotilla.ReasignacionScreen
 import com.transandina.flotilla.ui.flotilla.VehiculoFormularioScreen
 import com.transandina.flotilla.ui.home.HomeScreen
-import com.transandina.flotilla.ui.mantenimiento.MantenimientoScreen
 import com.transandina.flotilla.ui.mantenimiento.RegistrarMantenimientoScreen
 import com.transandina.flotilla.ui.navigation.BottomNavItem
 import com.transandina.flotilla.ui.navigation.itemsParaRol
@@ -303,8 +302,28 @@ private fun AppNavigation(
                     onRegistroExitoso = { navController.volverYRecargar() }
                 )
             }
-            composable(BottomNavItem.Mantenimiento.ruta) { MantenimientoScreen() }
-            composable(BottomNavItem.Notificaciones.ruta) { NotificacionesScreen() }
+            // La pestaña Mantenimiento del conductor es el formulario sobre su
+            // vehículo asignado (Figma `49:161`, con la barra inferior visible).
+            composable(BottomNavItem.Mantenimiento.ruta) { entrada ->
+                val tokenRecarga by entrada.savedStateHandle
+                    .getStateFlow(CLAVE_RECARGAR, 0)
+                    .collectAsState()
+
+                RegistrarMantenimientoScreen(
+                    tokenRecarga = tokenRecarga,
+                    enPestana = true,
+                    onRegistrarKilometraje = { id ->
+                        navController.navigate(rutaRegistrarKilometraje(id))
+                    }
+                )
+            }
+            composable(BottomNavItem.Notificaciones.ruta) {
+                NotificacionesScreen(
+                    onAbrirVehiculo = { id, pestana ->
+                        navController.navigate(rutaVehiculoDetalle(id, pestana))
+                    }
+                )
+            }
             composable(BottomNavItem.Perfil.ruta) {
                 PerfilScreen(
                     onSesionCerrada = {

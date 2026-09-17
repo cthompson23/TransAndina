@@ -116,13 +116,26 @@ class RegistrarMantenimientoViewModel(
         }
     }
 
-    fun cargar(vehiculoId: String) {
-        if (_uiState.value.vehiculo?.id == vehiculoId) return
+    /**
+     * Carga el vehículo sobre el que se va a registrar. Sin [vehiculoId] se usa
+     * el vehículo asignado al conductor con sesión iniciada, que es como se
+     * entra desde la pestaña Mantenimiento.
+     */
+    fun cargar(vehiculoId: String?) {
+        val actual = _uiState.value.vehiculo
+        if (actual != null && (vehiculoId == null || actual.id == vehiculoId)) return
         viewModelScope.launch {
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
                 coroutineScope {
-                    val vehiculo = async { vehiculoRepository.obtenerVehiculoPorId(vehiculoId) }
+                    val vehiculo = async {
+                        if (vehiculoId != null) {
+                            vehiculoRepository.obtenerVehiculoPorId(vehiculoId)
+                        } else {
+                            authRepository.usuarioActualId()
+                                ?.let { vehiculoRepository.obtenerVehiculoAsignado(it) }
+                        }
+                    }
                     val frecuencias = async { mantenimientoRepository.obtenerFrecuencias() }
                     val encontrado = vehiculo.await()
                     _uiState.update {
@@ -132,7 +145,11 @@ class RegistrarMantenimientoViewModel(
                             // Se propone el km actual: es lo más común al registrar el mismo día.
                             km = encontrado?.kmActual?.toLong()?.toString().orEmpty(),
                             cargando = false,
-                            error = if (encontrado == null) "No encontramos ese vehículo" else null
+                            error = when {
+                                encontrado != null -> null
+                                vehiculoId != null -> "No encontramos ese vehículo"
+                                else -> null // Sin vehículo asignado: lo explica la pantalla
+                            }
                         )
                     }
                 }
@@ -142,22 +159,49 @@ class RegistrarMantenimientoViewModel(
         }
     }
 
-    fun onTipoChange(tipo: TipoMantenimiento) = _uiState.update { it.copy(tipo = tipo, error = null) }
-    fun onCategoriaChange(valor: String) = _uiState.update { it.copy(categoria = valor, error = null) }
-    fun onFechaChange(fecha: LocalDate) = _uiState.update { it.copy(fecha = fecha, error = null) }
-    fun onKmChange(valor: String) = _uiState.update { it.copy(km = valor, error = null) }
-    fun onTallerChange(valor: String) = _uiState.update { it.copy(taller = valor, error = null) }
-    fun onResponsableChange(valor: String) = _uiState.update { it.copy(responsable = valor, error = null) }
-    fun onCostoChange(valor: String) = _uiState.update { it.copy(costo = valor, error = null) }
-    fun onDescripcionChange(valor: String) = _uiState.update { it.copy(descripcion = valor, error = null) }
+    // Cualquier edición limpia el error y el aviso de "guardado" anterior.
+    private fun editar(cambio: (RegistrarMantenimientoUiState) -> RegistrarMantenimientoUiState) =
+        _uiState.update { cambio(it).copy(error = null, guardado = false) }
 
-    fun onFotoAgregada(foto: FotoAdjunta) = _uiState.update {
-        if (it.fotos.size >= MAXIMO_FOTOS) it else it.copy(fotos = it.fotos + foto, error = null)
+    fun onTipoChange(tipo: TipoMantenimiento) = editar { it.copy(tipo = tipo) }
+    fun onCategoriaChange(valor: String) = editar { it.copy(categoria = valor) }
+    fun onFechaChange(fecha: LocalDate) = editar { it.copy(fecha = fecha) }
+    fun onKmChange(valor: String) = editar { it.copy(km = valor) }
+    fun onTallerChange(valor: String) = editar { it.copy(taller = valor) }
+    fun onResponsableChange(valor: String) = editar { it.copy(responsable = valor) }
+    fun onCostoChange(valor: String) = editar { it.copy(costo = valor) }
+    fun onDescripcionChange(valor: String) = editar { it.copy(descripcion = valor) }
+
+    fun onFotoAgregada(foto: FotoAdjunta) = editar {
+        if (it.fotos.size >= MAXIMO_FOTOS) it else it.copy(fotos = it.fotos + foto)
     }
 
-    fun onFotoQuitada(id: String) = _uiState.update { it.copy(fotos = it.fotos.filterNot { f -> f.id == id }) }
+    fun onFotoQuitada(id: String) = editar { it.copy(fotos = it.fotos.filterNot { f -> f.id == id }) }
 
     fun onErrorFoto(mensaje: String) = _uiState.update { it.copy(error = mensaje) }
+
+    /**
+     * Deja el formulario en blanco sin salir de la pantalla. Lo usa la pestaña
+     * del conductor, que no tiene a dónde volver después de guardar.
+     *
+     * @param conservarAviso mantiene el mensaje de "registrado correctamente".
+     */
+    fun limpiarFormulario(conservarAviso: Boolean = false) = _uiState.update {
+        it.copy(
+            tipo = null,
+            categoria = null,
+            fecha = LocalDate.now(),
+            km = it.vehiculo?.kmActual?.toLong()?.toString().orEmpty(),
+            taller = "",
+            responsable = "",
+            costo = "",
+            descripcion = "",
+            fotos = emptyList(),
+            error = null,
+            guardado = conservarAviso,
+            fotosFallidas = if (conservarAviso) it.fotosFallidas else 0
+        )
+    }
 
     fun guardar() {
         val s = _uiState.value
