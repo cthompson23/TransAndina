@@ -283,6 +283,8 @@ private fun AppNavigation(
                     pestanaInicial = pestana,
                     tokenRecarga = tokenRecarga,
                     esEncargado = rolActual == RolUsuario.encargado,
+                    // El mecánico no registra kilometraje (migración 202609172200).
+                    puedeRegistrarKilometraje = rolActual != RolUsuario.mecanico,
                     onAtras = { navController.popBackStack() },
                     onRegistrarKilometraje = { id ->
                         navController.navigate(rutaRegistrarKilometraje(id))
@@ -346,9 +348,19 @@ private fun AppNavigation(
                 )
             }
             composable(RUTA_REGISTRAR_MANTENIMIENTO) { entrada ->
+                // Si se registra el kilometraje desde aquí, al volver hay que
+                // releer el vehículo para que acepte la nueva lectura.
+                val tokenRecarga by entrada.savedStateHandle
+                    .getStateFlow(CLAVE_RECARGAR, 0)
+                    .collectAsState()
+
                 RegistrarMantenimientoScreen(
                     vehiculoId = entrada.arguments?.getString(ARG_VEHICULO_ID).orEmpty(),
+                    tokenRecarga = tokenRecarga,
                     onAtras = { navController.popBackStack() },
+                    onRegistrarKilometraje = { id ->
+                        navController.navigate(rutaRegistrarKilometraje(id))
+                    },
                     onGuardado = { navController.volverYRecargar() }
                 )
             }

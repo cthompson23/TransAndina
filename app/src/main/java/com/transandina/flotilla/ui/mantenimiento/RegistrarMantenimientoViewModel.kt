@@ -68,6 +68,16 @@ data class RegistrarMantenimientoUiState(
 
     val puedeAdjuntar: Boolean get() = fotos.size < MAXIMO_FOTOS
 
+    /**
+     * El servicio se hizo con más kilómetros de los que tiene registrados el
+     * vehículo: primero hay que registrar la lectura del odómetro.
+     */
+    val kmMayorAlDelVehiculo: Boolean
+        get() {
+            val ingresado = interpretarKilometros(km) ?: return false
+            return ingresado > (vehiculo?.kmActual ?: return false)
+        }
+
     /** Siguiente servicio si se guarda lo que hay en el formulario; null si no aplica. */
     val estimado: ServicioEstimado?
         get() {
@@ -92,6 +102,19 @@ class RegistrarMantenimientoViewModel(
 
     private val _uiState = MutableStateFlow(RegistrarMantenimientoUiState())
     val uiState: StateFlow<RegistrarMantenimientoUiState> = _uiState
+
+    /**
+     * Vuelve a leer el vehículo sin tocar lo que la persona ya escribió. Se
+     * usa al volver de registrar el kilometraje.
+     */
+    fun recargarVehiculo() {
+        val vehiculoId = _uiState.value.vehiculo?.id ?: return
+        viewModelScope.launch {
+            val actualizado = runCatching { vehiculoRepository.obtenerVehiculoPorId(vehiculoId) }
+                .getOrNull() ?: return@launch
+            _uiState.update { it.copy(vehiculo = actualizado, error = null) }
+        }
+    }
 
     fun cargar(vehiculoId: String) {
         if (_uiState.value.vehiculo?.id == vehiculoId) return
@@ -148,11 +171,12 @@ class RegistrarMantenimientoViewModel(
             s.tipo == null -> "Selecciona el tipo de mantenimiento"
             s.categoria == null -> "Selecciona la categoría"
             km == null -> "Ingresa el kilometraje del servicio"
-            // El encargado no puede registrar kilometraje (solo el conductor),
-            // así que un servicio "en el futuro" del odómetro quedaría incoherente.
+            // El odómetro solo sube: un servicio no puede estar "adelante" de
+            // la última lectura del vehículo. La pantalla ofrece registrarla.
             km > vehiculo.kmActual ->
-                "El kilometraje no puede ser mayor al actual del vehículo " +
-                    "(${formatearKilometrosConUnidad(vehiculo.kmActual)})"
+                "El servicio tiene más kilómetros que la última lectura del vehículo " +
+                    "(${formatearKilometrosConUnidad(vehiculo.kmActual)}). " +
+                    "Registra primero el kilometraje."
             s.taller.isBlank() -> "Indica el taller o lugar del servicio"
             costo == null -> "Ingresa un costo válido (puede ser 0)"
             else -> null

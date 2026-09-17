@@ -75,8 +75,10 @@ enum class PestanaVehiculo { INFORMACION, HISTORIAL, KILOMETRAJE, DOCUMENTOS }
  * unidad como al encargado con cualquier vehículo de la flotilla.
  *
  * @param esEncargado muestra el conductor asignado y las acciones del
- *   encargado (reasignar, editar datos y documentos), y oculta "Registrar
- *   kilometraje", que solo puede hacer el conductor (Figma `102:178`).
+ *   encargado: reasignar, editar datos y documentos, y registrar
+ *   mantenimientos (Figma `102:178`).
+ * @param puedeRegistrarKilometraje lo pueden hacer el conductor asignado y el
+ *   encargado (migración 202609172200), no el mecánico.
  */
 @Composable
 fun VehiculoDetalleScreen(
@@ -85,6 +87,7 @@ fun VehiculoDetalleScreen(
     pestanaInicial: PestanaVehiculo = PestanaVehiculo.INFORMACION,
     viewModel: VehiculoDetalleViewModel = viewModel(),
     esEncargado: Boolean = false,
+    puedeRegistrarKilometraje: Boolean = true,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (vehiculoId: String) -> Unit = {},
     onRegistrarMantenimiento: (vehiculoId: String) -> Unit = {},
@@ -103,6 +106,7 @@ fun VehiculoDetalleScreen(
         pestanaInicial = pestanaInicial,
         modifier = modifier,
         esEncargado = esEncargado,
+        puedeRegistrarKilometraje = puedeRegistrarKilometraje,
         onAtras = onAtras,
         onRegistrarKilometraje = onRegistrarKilometraje,
         onRegistrarMantenimiento = onRegistrarMantenimiento,
@@ -117,6 +121,7 @@ private fun ContenidoDetalle(
     pestanaInicial: PestanaVehiculo,
     modifier: Modifier = Modifier,
     esEncargado: Boolean = false,
+    puedeRegistrarKilometraje: Boolean = true,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (String) -> Unit = {},
     onRegistrarMantenimiento: (String) -> Unit = {},
@@ -200,7 +205,7 @@ private fun ContenidoDetalle(
                             vehiculo = vehiculo,
                             historial = uiState.historialKilometraje,
                             proximos = uiState.proximosMantenimientos,
-                            puedeRegistrar = !esEncargado,
+                            puedeRegistrar = puedeRegistrarKilometraje,
                             onRegistrarKilometraje = { onRegistrarKilometraje(vehiculo.id) }
                         )
 

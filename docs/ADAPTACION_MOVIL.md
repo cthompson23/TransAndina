@@ -217,6 +217,12 @@ Así se pasa de 6 a 5 pestañas sin perder ninguna función.
 - La base de datos bloquea a las cuentas no activas. Aun así, Supabase Auth les deja iniciar sesión, así que después del login la app revisa `usuarios.estado` y, si no es `activo`, muestra el motivo y cierra la sesión.
 - Un encargado no puede cambiar el estado de su propia cuenta.
 
+### Kilometraje: quién lo registra (decidido el 17/09/2026)
+
+- Lo registran el **conductor asignado** y el **encargado** (sobre cualquier vehículo), no el mecánico.
+- Se le abrió al encargado porque un vehículo sin conductor no podía actualizar nunca su kilometraje, y porque si el conductor lo olvida nadie más podía hacerlo.
+- La base sigue exigiendo que cada lectura sea mayor a la anterior, y guarda quién la registró.
+
 ### Reasignación: detalles de backend
 - Se hace con el RPC `reasignar_conductor(vehiculo, nuevo_conductor, fecha_efectiva, motivo)`, que cambia el vehículo y guarda el historial en `reasignaciones` en un solo paso.
 - La fecha efectiva es informativa: el cambio se aplica en el momento.
@@ -265,7 +271,7 @@ Decisiones tomadas al implementar:
 - **RegistroMantenimiento (`49:161`)**: se agrega el campo obligatorio **"Kilometraje del servicio"**, que no está en el Figma y se precarga con el kilometraje actual del vehículo. La base lo exige (`mantenimientos.km`) y hace falta para estimar el próximo mantenimiento (decidido el 17/09/2026). Las categorías se leen de `frecuencias_mantenimiento` según el tipo de vehículo.
   - Lo pueden registrar el **encargado** (sobre cualquier vehículo, decidido el 17/09/2026) y el conductor (sobre el suyo). La pantalla es la misma; por ahora solo está conectada para el encargado, desde la pestaña Historial del detalle.
   - Campos además del Figma: **Taller** (obligatorio, es el "lugar") y **Descripción** (opcional). El **costo** es obligatorio, pero puede ser 0.
-  - El kilometraje del servicio no puede ser mayor al actual del vehículo, porque el encargado no puede registrar kilometraje.
+  - El kilometraje del servicio no puede ser mayor a la última lectura del vehículo, porque el odómetro solo sube. Si lo es, la pantalla ofrece registrar primero la lectura y al volver acepta el servicio.
   - Debajo se muestra el **próximo servicio estimado** de la categoría elegida.
   - **Fotos**: hasta 3, JPG o PNG. Antes de subirlas se reducen a 1600 px y se guardan como JPEG en el bucket `mantenimientos`, con la ruta `<vehiculo>/<mantenimiento>/<uuid>.jpg`. Si una foto falla, el mantenimiento igual queda guardado y se avisa. Todavía no hay pantalla para ver las fotos.
 - **DocumentosVehiculo (`87:135`)**: se muestra también "Permiso de carga" (`vehiculos.fecha_permiso_carga`).
@@ -282,6 +288,7 @@ Verificado contra la base real el 17/09/2026. Migraciones en `supabase/migration
 | `202609171900_encargado.sql` | Estado de cuenta, bloqueo de cuentas no activas, permiso de carga, alertas de gerencia, reasignaciones, registrar administrador | Aplicada (17/09/2026) |
 | `202609171910_frecuencias_iniciales.sql` | Catálogo de categorías y frecuencias (la tabla estaba vacía) | Aplicada (17/09/2026) |
 | `202609172100_encargado_registra_mantenimientos.sql` | El encargado también puede registrar mantenimientos | **Pendiente**: aplicar para que el encargado pueda guardar |
+| `202609172200_encargado_registra_kilometraje.sql` | El encargado también puede registrar kilometraje | **Pendiente**: aplicar para que el encargado pueda guardar |
 
 El proyecto de Supabase **no pide confirmar el correo**, así que al registrarse
 queda la sesión abierta y la app guarda el perfil enseguida. Por eso se borró la

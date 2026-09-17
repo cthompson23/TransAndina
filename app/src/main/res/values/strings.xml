@@ -208,6 +208,7 @@
     <string name="mant_sin_categorias">No hay categorías configuradas para este tipo de vehículo. Revise la tabla frecuencias_mantenimiento.</string>
     <string name="mant_km">Kilometraje del servicio</string>
     <string name="mant_km_ayuda">Kilometraje actual del vehículo: %1$s</string>
+    <string name="mant_km_mayor">El vehículo tiene registrados %1$s. Registra primero esa lectura para poder guardar el servicio.</string>
     <string name="mant_taller_marcador">Nombre del taller o lugar</string>
     <string name="mant_responsable_marcador">Nombre del responsable</string>
     <string name="mant_costo_marcador">₡ 0,00</string>

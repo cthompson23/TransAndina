@@ -59,6 +59,7 @@ import com.transandina.flotilla.domain.ServicioEstimado
 import com.transandina.flotilla.domain.formatearFecha
 import com.transandina.flotilla.domain.formatearKilometrosConUnidad
 import com.transandina.flotilla.ui.components.BotonAdjuntar
+import com.transandina.flotilla.ui.components.BotonSecundario
 import com.transandina.flotilla.ui.components.CampoFecha
 import com.transandina.flotilla.ui.components.CampoSeleccion
 import com.transandina.flotilla.ui.components.CampoTexto
@@ -84,7 +85,9 @@ import java.time.LocalDate
 fun RegistrarMantenimientoScreen(
     vehiculoId: String,
     viewModel: RegistrarMantenimientoViewModel = viewModel(),
+    tokenRecarga: Int = 0,
     onAtras: () -> Unit = {},
+    onRegistrarKilometraje: (vehiculoId: String) -> Unit = {},
     onGuardado: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -98,6 +101,12 @@ fun RegistrarMantenimientoScreen(
 
     LaunchedEffect(vehiculoId) {
         viewModel.cargar(vehiculoId)
+    }
+
+    // Al volver de registrar el kilometraje, se relee el vehículo para que la
+    // nueva lectura valga; lo escrito en el formulario se conserva.
+    LaunchedEffect(tokenRecarga) {
+        if (tokenRecarga > 0) viewModel.recargarVehiculo()
     }
 
     LaunchedEffect(uiState.guardado) {
@@ -159,6 +168,7 @@ fun RegistrarMantenimientoScreen(
                 )
             },
             onQuitarFoto = viewModel::onFotoQuitada,
+            onRegistrarKilometraje = { uiState.vehiculo?.let { onRegistrarKilometraje(it.id) } },
             onGuardar = viewModel::guardar,
             onCancelar = onAtras
         )
@@ -176,6 +186,7 @@ private data class AccionesMantenimiento(
     val onDescripcion: (String) -> Unit = {},
     val onAdjuntar: () -> Unit = {},
     val onQuitarFoto: (String) -> Unit = {},
+    val onRegistrarKilometraje: () -> Unit = {},
     val onGuardar: () -> Unit = {},
     val onCancelar: () -> Unit = {}
 )
@@ -268,14 +279,33 @@ private fun ContenidoRegistrarMantenimiento(
                     tipoTeclado = KeyboardType.Number,
                     habilitado = editable
                 )
-                Text(
-                    text = stringResource(
-                        R.string.mant_km_ayuda,
-                        formatearKilometrosConUnidad(vehiculo.kmActual)
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TransAndinaTheme.colores.textoSecundario
-                )
+                if (uiState.kmMayorAlDelVehiculo) {
+                    // El odómetro solo sube: primero se registra la lectura y
+                    // después el servicio (migración 202609172200).
+                    Text(
+                        text = stringResource(
+                            R.string.mant_km_mayor,
+                            formatearKilometrosConUnidad(vehiculo.kmActual)
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TransAndinaTheme.colores.estadoAviso
+                    )
+                    BotonSecundario(
+                        texto = stringResource(R.string.vehiculo_opcion_registrar_km),
+                        onClick = acciones.onRegistrarKilometraje,
+                        modifier = Modifier.fillMaxWidth(),
+                        habilitado = editable
+                    )
+                } else {
+                    Text(
+                        text = stringResource(
+                            R.string.mant_km_ayuda,
+                            formatearKilometrosConUnidad(vehiculo.kmActual)
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TransAndinaTheme.colores.textoSecundario
+                    )
+                }
                 CampoTexto(
                     etiqueta = stringResource(R.string.reporte_taller),
                     valor = uiState.taller,
@@ -468,6 +498,34 @@ private fun TarjetaEstimado(categoria: String?, estimado: ServicioEstimado?) {
     }
 }
 
+private val vehiculoDeMuestra = Vehiculo(
+    id = "1",
+    placa = "SCD-3421",
+    marca = "Nissan",
+    modelo = "Frontier",
+    anio = 2021,
+    tipo = "liviano",
+    kmActual = 492_400.0
+)
+
+@Preview(name = "Mantenimiento · km mayor al del vehículo", showBackground = true, heightDp = 900)
+@Composable
+private fun RegistrarMantenimientoKmMayorPreview() {
+    TransAndinaFlotillaTheme {
+        ContenidoRegistrarMantenimiento(
+            uiState = RegistrarMantenimientoUiState(
+                vehiculo = vehiculoDeMuestra,
+                tipo = TipoMantenimiento.correctivo,
+                categoria = "Frenos",
+                km = "495000",
+                taller = "Taller Norte"
+            ),
+            preparandoFotos = false,
+            acciones = AccionesMantenimiento()
+        )
+    }
+}
+
 @Preview(name = "Registrar mantenimiento", showBackground = true, heightDp = 1300)
 @Composable
 private fun RegistrarMantenimientoPreview() {
@@ -475,15 +533,7 @@ private fun RegistrarMantenimientoPreview() {
     TransAndinaFlotillaTheme {
         ContenidoRegistrarMantenimiento(
             uiState = RegistrarMantenimientoUiState(
-                vehiculo = Vehiculo(
-                    id = "1",
-                    placa = "SCD-3421",
-                    marca = "Nissan",
-                    modelo = "Frontier",
-                    anio = 2021,
-                    tipo = "liviano",
-                    kmActual = 492_400.0
-                ),
+                vehiculo = vehiculoDeMuestra,
                 frecuencias = listOf(
                     FrecuenciaMantenimiento("f1", "liviano", "Cambio de aceite", 5_000.0, 180),
                     FrecuenciaMantenimiento("f2", "liviano", "Otro", null, null)
