@@ -278,11 +278,17 @@ Verificado contra la base real el 17/09/2026. Migraciones en `supabase/migration
 
 | Migración | Qué hace | Estado |
 |---|---|---|
-| `202609151900_crear_perfil_usuario_desde_auth.sql` | Trigger que crea el perfil al registrarse | **No aplicar todavía**: rompe el registro actual (ver la advertencia en el archivo) |
 | `202609152200_mantenimientos.sql` | Columna `taller` y bucket de fotos | Aplicada (17/09/2026) |
 | `202609171900_encargado.sql` | Estado de cuenta, bloqueo de cuentas no activas, permiso de carga, alertas de gerencia, reasignaciones, registrar administrador | Aplicada (17/09/2026) |
 | `202609171910_frecuencias_iniciales.sql` | Catálogo de categorías y frecuencias (la tabla estaba vacía) | Aplicada (17/09/2026) |
 | `202609172100_encargado_registra_mantenimientos.sql` | El encargado también puede registrar mantenimientos | **Pendiente**: aplicar para que el encargado pueda guardar |
+
+El proyecto de Supabase **no pide confirmar el correo**, así que al registrarse
+queda la sesión abierta y la app guarda el perfil enseguida. Por eso se borró la
+migración `202609151900_crear_perfil_usuario_desde_auth.sql` (queda en el historial
+de git, commit `8a63686`): resolvía un problema que con esta configuración no
+existe, y aplicada rompía el registro. Si algún día se activa la confirmación de
+correo, hay que retomarla junto con el cambio en la app, no sola.
 
 Datos de ejemplo (no son migraciones) en `supabase/datos_ejemplo/`: `mantenimientos_ejemplo.sql` inserta 8 mantenimientos por vehículo activo, y `borrar_mantenimientos_ejemplo.sql` los quita.
 
