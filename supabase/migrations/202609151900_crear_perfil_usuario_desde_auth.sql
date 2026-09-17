@@ -1,5 +1,16 @@
 -- PROPUESTA — NO APLICADA. Requiere revisión del equipo antes de correrla.
 --
+-- ADVERTENCIA (17/09/2026): NO correr hasta ajustar la app. El trigger se
+-- ejecuta dentro del signUp, o sea ANTES de que RegistroViewModel inserte el
+-- perfil, así que:
+--   * el INSERT de la app falla por llave duplicada y muestra "No se pudo
+--     crear la cuenta" aunque la cuenta sí se creó;
+--   * la app no manda `data` en signUp, así que el perfil queda con nombre y
+--     cédula vacíos, y el segundo registro choca con usuarios_cedula_key y
+--     hace fallar el signUp completo.
+-- Antes de aplicarla: AuthRepository.registrarUsuario debe mandar los datos
+-- del formulario como `data` y RegistroViewModel debe dejar de insertar.
+--
 -- Problema
 -- --------
 -- RegistroViewModel.registrar() hace dos pasos:
