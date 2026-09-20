@@ -78,6 +78,7 @@ fun VehiculoFormularioScreen(
             onMarca = viewModel::onMarcaChange,
             onModelo = viewModel::onModeloChange,
             onCapacidad = viewModel::onCapacidadChange,
+            onKmInicial = viewModel::onKmInicialChange,
             onMarchamo = viewModel::onFechaMarchamoChange,
             onRevision = viewModel::onFechaRevisionChange,
             onSeguro = viewModel::onFechaSeguroChange,
@@ -99,6 +100,7 @@ private data class AccionesVehiculoFormulario(
     val onMarca: (String) -> Unit = {},
     val onModelo: (String) -> Unit = {},
     val onCapacidad: (String) -> Unit = {},
+    val onKmInicial: (String) -> Unit = {},
     val onMarchamo: (LocalDate) -> Unit = {},
     val onRevision: (LocalDate) -> Unit = {},
     val onSeguro: (LocalDate) -> Unit = {},
@@ -204,6 +206,24 @@ private fun ContenidoVehiculoFormulario(
                 tipoTeclado = KeyboardType.Decimal,
                 habilitado = editable
             )
+            // Al editar no se pide: el kilometraje solo se mueve registrando
+            // lecturas, que es lo que valida el trigger de la base.
+            if (!uiState.esEdicion) {
+                CampoTexto(
+                    etiqueta = stringResource(R.string.kilometraje_actual),
+                    valor = uiState.kmInicial,
+                    onValorCambia = acciones.onKmInicial,
+                    marcadorDePosicion = stringResource(R.string.vehiculo_form_km_marcador),
+                    forma = FormaPildora,
+                    tipoTeclado = KeyboardType.Number,
+                    habilitado = editable
+                )
+                Text(
+                    text = stringResource(R.string.vehiculo_form_km_ayuda),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TransAndinaTheme.colores.textoSecundario
+                )
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
             Text(

@@ -3,6 +3,9 @@ package com.transandina.flotilla.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.transandina.flotilla.data.model.RolUsuario
+import com.transandina.flotilla.domain.esCedulaValida
+import com.transandina.flotilla.domain.esCorreoValido
+import com.transandina.flotilla.domain.esTelefonoValido
 import com.transandina.flotilla.data.repository.AuthRepository
 import com.transandina.flotilla.data.repository.NuevoUsuarioPayload
 import com.transandina.flotilla.data.repository.UsuarioRepository
@@ -96,6 +99,15 @@ class RegistroViewModel(
     private fun validar(s: RegistroUiState): String? {
         if (s.nombreCompleto.isBlank() || s.cedula.isBlank() || s.email.isBlank() || s.telefono.isBlank()) {
             return "Completa todos los campos obligatorios"
+        }
+        if (!esCorreoValido(s.email)) {
+            return "Escribe un correo válido, como nombre@correo.com"
+        }
+        if (!esCedulaValida(s.cedula)) {
+            return "La cédula debe tener entre 9 y 12 dígitos, sin guiones ni espacios"
+        }
+        if (!esTelefonoValido(s.telefono)) {
+            return "El teléfono debe tener al menos 8 dígitos"
         }
         if (s.rol == RolUsuario.conductor && s.licenciaConducir.isBlank()) {
             return "La licencia de conducir es obligatoria para conductores"

@@ -3,6 +3,9 @@ package com.transandina.flotilla.ui.usuarios
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.transandina.flotilla.data.model.RolUsuario
+import com.transandina.flotilla.domain.esCedulaValida
+import com.transandina.flotilla.domain.esCorreoValido
+import com.transandina.flotilla.domain.esTelefonoValido
 import com.transandina.flotilla.data.repository.AuthRepository
 import com.transandina.flotilla.data.repository.NuevoUsuarioPayload
 import com.transandina.flotilla.data.repository.UsuarioRepository
@@ -97,8 +100,10 @@ class RegistrarAdministradorViewModel(
     private fun validar(s: RegistrarAdministradorUiState): String? = when {
         s.nombreCompleto.isBlank() || s.cedula.isBlank() || s.email.isBlank() || s.telefono.isBlank() ->
             "Completa todos los campos obligatorios"
-        !s.email.trim().matches(Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) ->
-            "Ingresa un correo electrónico válido"
+        !esCorreoValido(s.email) -> "Escribe un correo válido, como nombre@correo.com"
+        !esCedulaValida(s.cedula) ->
+            "La cédula debe tener entre 9 y 12 dígitos, sin guiones ni espacios"
+        !esTelefonoValido(s.telefono) -> "El teléfono debe tener al menos 8 dígitos"
         s.password.length < 6 -> "La contraseña debe tener al menos 6 caracteres"
         s.password != s.confirmarPassword -> "Las contraseñas no coinciden"
         else -> null

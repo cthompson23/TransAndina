@@ -197,6 +197,8 @@
     <string name="vehiculo_form_modelo_marcador">Ingrese el modelo</string>
     <string name="vehiculo_form_capacidad">Capacidad (toneladas)</string>
     <string name="vehiculo_form_capacidad_marcador">Ingrese la capacidad</string>
+    <string name="vehiculo_form_km_marcador">Ingrese el kilometraje actual</string>
+    <string name="vehiculo_form_km_ayuda">Queda como la primera lectura del odómetro. Después se actualiza registrando kilometraje.</string>
     <string name="vehiculo_form_documentos">Vencimiento de documentos</string>
     <string name="vehiculo_form_documentos_ayuda">Opcional. Con estas fechas se calculan las alertas de documentos.</string>
     <string name="vehiculo_form_estado">Estado del vehículo</string>

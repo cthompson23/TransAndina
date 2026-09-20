@@ -308,7 +308,8 @@ Decisiones tomadas al implementar:
   - Próxima: documento que vence en menos de 15 días, y mantenimiento a 1 000 km o 15 días.
   - Informativa: reasignaciones de los últimos 30 días.
 - **Próximo mantenimiento**: solo se calcula para las categorías con al menos un servicio registrado.
-- **Registrar vehículo** incluye las cuatro fechas de documentos, que son opcionales. Es la única forma de cargarlas.
+- **Registrar vehículo** incluye las cuatro fechas de documentos, que son opcionales. Es la única forma de cargarlas. También pide el **kilometraje actual**, que no se guarda como campo del vehículo: se inserta como la primera lectura de `kilometraje`, para que quede en el historial y sea el trigger `trg_actualizar_km` el que ponga `km_actual`. Al **editar** no aparece: el odómetro solo se mueve registrando lecturas.
+- **Validaciones de formato** (`domain/Validaciones.kt`, con pruebas): correo, cédula (9 a 12 dígitos, sin guiones) y teléfono (8 a 15 dígitos, admite `+506` y separadores). Las usan el registro público y "Registrar administrador", para que los dos rechacen lo mismo antes de llamar a Supabase.
 - **Aviso de gerencia**: no tiene frame en el Figma. Es un formulario con destinatario (todos los conductores, todas las cuentas o una persona) y mensaje. Se entra desde el botón flotante de Alertas.
 - **Desactivado** usa un chip gris (`EstadoNeutro`), como en el Figma `102:258`.
 - **PDF**: tamaño carta, generado con `android.graphics.pdf` y compartido con `FileProvider` (autoridad `${applicationId}.archivos`).

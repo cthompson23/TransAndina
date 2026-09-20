@@ -5,13 +5,17 @@ import androidx.lifecycle.viewModelScope
 import com.transandina.flotilla.data.model.EstadoCuenta
 import com.transandina.flotilla.data.model.PersonaResumen
 import com.transandina.flotilla.data.model.ReasignarConductorParams
+import com.transandina.flotilla.data.model.RegistroKilometraje
 import com.transandina.flotilla.data.model.RolUsuario
 import com.transandina.flotilla.data.model.TIPOS_VEHICULO
 import com.transandina.flotilla.data.model.Usuario
 import com.transandina.flotilla.data.model.VehiculoPayload
+import com.transandina.flotilla.data.repository.AuthRepository
+import com.transandina.flotilla.data.repository.KilometrajeRepository
 import com.transandina.flotilla.data.repository.UsuarioRepository
 import com.transandina.flotilla.data.repository.VehiculoRepository
 import com.transandina.flotilla.domain.aFechaIso
+import com.transandina.flotilla.domain.interpretarKilometros
 import com.transandina.flotilla.domain.parsearFechaIso
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -30,6 +34,8 @@ data class VehiculoFormularioUiState(
     val marca: String = "",
     val modelo: String = "",
     val capacidad: String = "",
+    /** Primera lectura del odómetro; solo se pide al registrar. */
+    val kmInicial: String = "",
     val fechaMarchamo: LocalDate? = null,
     val fechaRevisionTecnica: LocalDate? = null,
     val fechaSeguro: LocalDate? = null,
@@ -62,7 +68,9 @@ data class VehiculoFormularioUiState(
 /** Registrar un vehículo nuevo o editar uno existente (solo encargado). */
 class VehiculoFormularioViewModel(
     private val vehiculoRepository: VehiculoRepository = VehiculoRepository(),
-    private val usuarioRepository: UsuarioRepository = UsuarioRepository()
+    private val usuarioRepository: UsuarioRepository = UsuarioRepository(),
+    private val kilometrajeRepository: KilometrajeRepository = KilometrajeRepository(),
+    private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VehiculoFormularioUiState())
@@ -148,6 +156,7 @@ class VehiculoFormularioViewModel(
     fun onMarcaChange(valor: String) = _uiState.update { it.copy(marca = valor, error = null) }
     fun onModeloChange(valor: String) = _uiState.update { it.copy(modelo = valor, error = null) }
     fun onCapacidadChange(valor: String) = _uiState.update { it.copy(capacidad = valor, error = null) }
+    fun onKmInicialChange(valor: String) = _uiState.update { it.copy(kmInicial = valor, error = null) }
     fun onFechaMarchamoChange(fecha: LocalDate) = _uiState.update { it.copy(fechaMarchamo = fecha, error = null) }
     fun onFechaRevisionChange(fecha: LocalDate) = _uiState.update { it.copy(fechaRevisionTecnica = fecha, error = null) }
     fun onFechaSeguroChange(fecha: LocalDate) = _uiState.update { it.copy(fechaSeguro = fecha, error = null) }
@@ -169,6 +178,9 @@ class VehiculoFormularioViewModel(
             anio == null || anio !in 1950..anioMaximo -> "Ingresa un año entre 1950 y $anioMaximo"
             capacidadTexto.isNotEmpty() && (capacidad == null || capacidad < 0) ->
                 "La capacidad debe ser un número en toneladas"
+            !s.esEdicion && s.kmInicial.isNotBlank() &&
+                (interpretarKilometros(s.kmInicial)?.let { it < 0 } ?: true) ->
+                "El kilometraje debe ser un número de kilómetros"
             else -> null
         }
         if (error != null) {
@@ -196,10 +208,32 @@ class VehiculoFormularioViewModel(
                 // El conductor no va en el payload: pasa por la función
                 // `reasignar_conductor`, que valida y guarda el historial.
                 val id = if (s.vehiculoId == null) {
-                    vehiculoRepository.registrarVehiculo(datos).id
+                    val creado = vehiculoRepository.registrarVehiculo(datos)
+                    // Desde aquí el vehículo ya existe: si algo falla más
+                    // abajo, un segundo intento edita en vez de duplicar la placa.
+                    _uiState.update { it.copy(vehiculoId = creado.id) }
+                    creado.id
                 } else {
                     vehiculoRepository.actualizarVehiculo(s.vehiculoId, datos)
                     s.vehiculoId
+                }
+
+                // El kilometraje inicial se guarda como la primera lectura del
+                // odómetro, no como un campo del vehículo: así queda en el
+                // historial y el trigger trg_actualizar_km pone km_actual.
+                val kmInicial = interpretarKilometros(s.kmInicial)
+                if (s.vehiculoId == null && kmInicial != null && kmInicial > 0) {
+                    val usuarioId = authRepository.usuarioActualId()
+                    if (usuarioId != null) {
+                        kilometrajeRepository.registrarKilometraje(
+                            RegistroKilometraje(
+                                vehiculoId = id,
+                                registradoPor = usuarioId,
+                                fecha = aFechaIso(LocalDate.now()),
+                                km = kmInicial
+                            )
+                        )
+                    }
                 }
                 if (s.conductorId != s.conductorOriginalId) {
                     vehiculoRepository.reasignarConductor(
