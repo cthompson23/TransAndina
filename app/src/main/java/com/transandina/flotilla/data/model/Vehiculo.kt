@@ -18,6 +18,7 @@ data class Vehiculo(
     @SerialName("fecha_seguro") val fechaSeguro: String? = null,
     @SerialName("fecha_permiso_carga") val fechaPermisoCarga: String? = null,
     @SerialName("conductor_id") val conductorId: String? = null,
+    @SerialName("mecanico_id") val mecanicoId: String? = null,
     val activo: Boolean = true
 )
 
@@ -38,7 +39,26 @@ data class VehiculoPayload(
     @SerialName("fecha_marchamo") val fechaMarchamo: String?,
     @SerialName("fecha_revision_tecnica") val fechaRevisionTecnica: String?,
     @SerialName("fecha_seguro") val fechaSeguro: String?,
-    @SerialName("fecha_permiso_carga") val fechaPermisoCarga: String?
+    @SerialName("fecha_permiso_carga") val fechaPermisoCarga: String?,
+    @SerialName("mecanico_id") val mecanicoId: String?
+)
+
+/**
+ * Mecánico que devuelve la función `mecanicos_disponibles()` (migración
+ * 202609201200): solo id y nombre, porque el conductor y el mecánico no
+ * pueden leer la tabla `usuarios` completa.
+ */
+@Serializable
+data class MecanicoDisponible(
+    val id: String,
+    @SerialName("nombre_completo") val nombreCompleto: String
+)
+
+/** Parámetros de la función `asignar_mecanico`. */
+@Serializable
+data class AsignarMecanicoParams(
+    @SerialName("p_vehiculo_id") val vehiculoId: String,
+    @SerialName("p_mecanico_id") val mecanicoId: String?
 )
 
 /** Valores del enum `tipo_vehiculo`. */
