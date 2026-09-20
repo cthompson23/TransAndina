@@ -46,8 +46,10 @@ import com.transandina.flotilla.domain.fechasDocumentos
 import com.transandina.flotilla.domain.formatearFecha
 import com.transandina.flotilla.domain.formatearFechaIso
 import com.transandina.flotilla.domain.formatearKilometrosConUnidad
+import com.transandina.flotilla.domain.aFechaIso
 import com.transandina.flotilla.domain.parsearFechaIso
 import com.transandina.flotilla.ui.components.BotonPrimario
+import com.transandina.flotilla.ui.components.CampoFecha
 import com.transandina.flotilla.ui.components.BotonSecundario
 import com.transandina.flotilla.ui.components.ChipEstado
 import com.transandina.flotilla.ui.components.ChipEstadoMantenimiento
@@ -62,6 +64,7 @@ import com.transandina.flotilla.ui.components.PestanasSegmentadas
 import com.transandina.flotilla.ui.components.PuntoGrafico
 import com.transandina.flotilla.ui.components.TarjetaTransAndina
 import com.transandina.flotilla.ui.components.TransAndinaTopBar
+import com.transandina.flotilla.ui.theme.FormaPildora
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
 import com.transandina.flotilla.ui.theme.TransAndinaTheme
 import java.time.format.TextStyle
@@ -78,8 +81,13 @@ enum class PestanaVehiculo { INFORMACION, HISTORIAL, KILOMETRAJE, DOCUMENTOS }
  * @param esEncargado muestra el conductor asignado y las acciones del
  *   encargado: reasignar, editar datos y documentos, y registrar
  *   mantenimientos (Figma `102:178`).
- * @param puedeRegistrarKilometraje lo pueden hacer el conductor asignado y el
- *   encargado (migración 202609172200), no el mecánico.
+ * @param puedeRegistrarKilometraje lo pueden hacer el conductor asignado, el
+ *   encargado y el mecánico responsable (migraciones 202609172200 y
+ *   202609201200).
+ * @param puedeAsignarMecanico solo el encargado y el conductor del vehículo
+ *   (función `asignar_mecanico`).
+ * @param puedeEditarMantenimiento solo el encargado (políticas
+ *   `mantenimientos_update` y `mantenimientos_delete`).
  */
 @Composable
 fun VehiculoDetalleScreen(
@@ -89,10 +97,15 @@ fun VehiculoDetalleScreen(
     viewModel: VehiculoDetalleViewModel = viewModel(),
     esEncargado: Boolean = false,
     puedeRegistrarKilometraje: Boolean = true,
+    puedeRegistrarMantenimiento: Boolean = true,
+    puedeAsignarMecanico: Boolean = false,
+    puedeEditarMantenimiento: Boolean = false,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (vehiculoId: String) -> Unit = {},
     onRegistrarMantenimiento: (vehiculoId: String) -> Unit = {},
+    onEditarMantenimiento: (mantenimientoId: String) -> Unit = {},
     onReasignarConductor: (vehiculoId: String) -> Unit = {},
+    onAsignarMecanico: (vehiculoId: String) -> Unit = {},
     onEditarVehiculo: (vehiculoId: String) -> Unit = {},
     tokenRecarga: Int = 0
 ) {
@@ -108,10 +121,15 @@ fun VehiculoDetalleScreen(
         modifier = modifier,
         esEncargado = esEncargado,
         puedeRegistrarKilometraje = puedeRegistrarKilometraje,
+        puedeRegistrarMantenimiento = puedeRegistrarMantenimiento,
+        puedeAsignarMecanico = puedeAsignarMecanico,
+        puedeEditarMantenimiento = puedeEditarMantenimiento,
         onAtras = onAtras,
         onRegistrarKilometraje = onRegistrarKilometraje,
         onRegistrarMantenimiento = onRegistrarMantenimiento,
+        onEditarMantenimiento = onEditarMantenimiento,
         onReasignarConductor = onReasignarConductor,
+        onAsignarMecanico = onAsignarMecanico,
         onEditarVehiculo = onEditarVehiculo
     )
 }
@@ -123,10 +141,15 @@ private fun ContenidoDetalle(
     modifier: Modifier = Modifier,
     esEncargado: Boolean = false,
     puedeRegistrarKilometraje: Boolean = true,
+    puedeRegistrarMantenimiento: Boolean = true,
+    puedeAsignarMecanico: Boolean = false,
+    puedeEditarMantenimiento: Boolean = false,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (String) -> Unit = {},
     onRegistrarMantenimiento: (String) -> Unit = {},
+    onEditarMantenimiento: (String) -> Unit = {},
     onReasignarConductor: (String) -> Unit = {},
+    onAsignarMecanico: (String) -> Unit = {},
     onEditarVehiculo: (String) -> Unit = {}
 ) {
     var pestana by rememberSaveable { mutableStateOf(pestanaInicial) }
@@ -191,18 +214,21 @@ private fun ContenidoDetalle(
                         PestanaVehiculo.INFORMACION -> PestanaInformacion(
                             vehiculo = vehiculo,
                             conductor = uiState.conductor,
+                            nombreMecanico = uiState.nombreMecanico,
                             esEncargado = esEncargado,
+                            puedeAsignarMecanico = puedeAsignarMecanico,
                             onReasignarConductor = { onReasignarConductor(vehiculo.id) },
+                            onAsignarMecanico = { onAsignarMecanico(vehiculo.id) },
                             onEditarVehiculo = { onEditarVehiculo(vehiculo.id) }
                         )
 
-                        // Por ahora solo el encargado registra desde aquí; el
-                        // formulario del conductor se conecta más adelante.
                         PestanaVehiculo.HISTORIAL -> PestanaHistorial(
                             mantenimientos = uiState.mantenimientos,
                             fotosPorMantenimiento = uiState.fotosPorMantenimiento,
-                            puedeRegistrar = esEncargado,
+                            puedeRegistrar = puedeRegistrarMantenimiento,
+                            puedeEditar = puedeEditarMantenimiento,
                             onRegistrar = { onRegistrarMantenimiento(vehiculo.id) },
+                            onEditar = onEditarMantenimiento,
                             onVerFoto = { fotoAmpliada = it }
                         )
 
@@ -232,14 +258,18 @@ private fun ContenidoDetalle(
 
 /**
  * Datos de solo lectura (Figma `28:418`). El encargado ve además el conductor
- * asignado, el kilometraje y sus acciones (Figma `102:178`).
+ * asignado, el kilometraje y sus acciones (Figma `102:178`). El mecánico
+ * responsable lo ven todos, y lo cambian el encargado y el conductor.
  */
 @Composable
 private fun ColumnScope.PestanaInformacion(
     vehiculo: Vehiculo,
     conductor: Usuario?,
+    nombreMecanico: String?,
     esEncargado: Boolean,
+    puedeAsignarMecanico: Boolean,
     onReasignarConductor: () -> Unit,
+    onAsignarMecanico: () -> Unit,
     onEditarVehiculo: () -> Unit
 ) {
     TarjetaTransAndina {
@@ -273,26 +303,49 @@ private fun ColumnScope.PestanaInformacion(
         }
     }
 
-    if (!esEncargado) return
-
     Spacer(modifier = Modifier.height(12.dp))
 
     TarjetaTransAndina {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (esEncargado) {
+                DatoEtiquetado(
+                    etiqueta = stringResource(R.string.detalle_conductor_asignado),
+                    valor = when {
+                        conductor != null -> conductor.nombreCompleto
+                        vehiculo.conductorId != null -> stringResource(R.string.detalle_conductor_no_disponible)
+                        else -> stringResource(R.string.sin_conductor)
+                    }
+                )
+                DatoEtiquetado(
+                    etiqueta = stringResource(R.string.kilometraje_actual),
+                    valor = formatearKilometrosConUnidad(vehiculo.kmActual)
+                )
+            }
             DatoEtiquetado(
-                etiqueta = stringResource(R.string.detalle_conductor_asignado),
+                etiqueta = stringResource(R.string.detalle_mecanico_asignado),
                 valor = when {
-                    conductor != null -> conductor.nombreCompleto
-                    vehiculo.conductorId != null -> stringResource(R.string.detalle_conductor_no_disponible)
-                    else -> stringResource(R.string.sin_conductor)
+                    nombreMecanico != null -> nombreMecanico
+                    vehiculo.mecanicoId != null -> stringResource(R.string.detalle_conductor_no_disponible)
+                    else -> stringResource(R.string.sin_mecanico)
                 }
-            )
-            DatoEtiquetado(
-                etiqueta = stringResource(R.string.kilometraje_actual),
-                valor = formatearKilometrosConUnidad(vehiculo.kmActual)
             )
         }
     }
+
+    if (puedeAsignarMecanico) {
+        Spacer(modifier = Modifier.height(16.dp))
+        BotonSecundario(
+            texto = if (vehiculo.mecanicoId == null) {
+                stringResource(R.string.detalle_asignar_mecanico)
+            } else {
+                stringResource(R.string.detalle_cambiar_mecanico)
+            },
+            onClick = onAsignarMecanico,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+
+    if (!esEncargado) return
 
     Spacer(modifier = Modifier.height(16.dp))
 
@@ -315,16 +368,24 @@ private fun ColumnScope.PestanaInformacion(
     )
 }
 
-/** Historial con filtro por tipo (Figma `51:125`, `102:178`). */
+/**
+ * Historial con filtros por tipo y por rango de fechas (Figma `51:125`,
+ * `102:178`). Las fechas se guardan en ISO (`yyyy-MM-dd`), igual que
+ * `mantenimientos.fecha`, así que se comparan como texto sin convertir.
+ */
 @Composable
 private fun ColumnScope.PestanaHistorial(
     mantenimientos: List<Mantenimiento>,
     fotosPorMantenimiento: Map<String, List<String>>,
     puedeRegistrar: Boolean,
+    puedeEditar: Boolean,
     onRegistrar: () -> Unit,
+    onEditar: (String) -> Unit,
     onVerFoto: (String) -> Unit
 ) {
     var filtro by rememberSaveable { mutableStateOf<TipoMantenimiento?>(null) }
+    var desde by rememberSaveable { mutableStateOf<String?>(null) }
+    var hasta by rememberSaveable { mutableStateOf<String?>(null) }
     val opciones = listOf(null, TipoMantenimiento.preventivo, TipoMantenimiento.correctivo)
 
     if (puedeRegistrar) {
@@ -348,9 +409,62 @@ private fun ColumnScope.PestanaHistorial(
 
     Spacer(modifier = Modifier.height(12.dp))
 
-    val visibles = mantenimientos.filter { filtro == null || it.tipo == filtro }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        CampoFecha(
+            etiqueta = stringResource(R.string.historial_desde),
+            fecha = parsearFechaIso(desde),
+            onFechaCambia = { desde = aFechaIso(it) },
+            forma = FormaPildora,
+            modifier = Modifier.weight(1f)
+        )
+        CampoFecha(
+            etiqueta = stringResource(R.string.historial_hasta),
+            fecha = parsearFechaIso(hasta),
+            onFechaCambia = { hasta = aFechaIso(it) },
+            forma = FormaPildora,
+            modifier = Modifier.weight(1f)
+        )
+    }
+
+    if (desde != null || hasta != null) {
+        Spacer(modifier = Modifier.height(8.dp))
+        BotonSecundario(
+            texto = stringResource(R.string.historial_limpiar_fechas),
+            onClick = {
+                desde = null
+                hasta = null
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+
+    if (puedeEditar && mantenimientos.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.historial_editar_ayuda),
+            style = MaterialTheme.typography.bodySmall,
+            color = TransAndinaTheme.colores.textoSecundario
+        )
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    val visibles = mantenimientos.filter { mantenimiento ->
+        (filtro == null || mantenimiento.tipo == filtro) &&
+            (desde == null || mantenimiento.fecha >= desde!!) &&
+            (hasta == null || mantenimiento.fecha <= hasta!!)
+    }
     if (visibles.isEmpty()) {
-        EstadoVacio(mensaje = stringResource(R.string.historial_vacio))
+        EstadoVacio(
+            mensaje = if (mantenimientos.isEmpty()) {
+                stringResource(R.string.historial_vacio)
+            } else {
+                stringResource(R.string.historial_sin_coincidencias)
+            }
+        )
         return
     }
 
@@ -358,7 +472,12 @@ private fun ColumnScope.PestanaHistorial(
         TarjetaMantenimiento(
             mantenimiento = mantenimiento,
             fotos = fotosPorMantenimiento[mantenimiento.id].orEmpty(),
-            onVerFoto = onVerFoto
+            onVerFoto = onVerFoto,
+            onClick = if (puedeEditar) {
+                { onEditar(mantenimiento.id) }
+            } else {
+                null
+            }
         )
         Spacer(modifier = Modifier.height(12.dp))
     }

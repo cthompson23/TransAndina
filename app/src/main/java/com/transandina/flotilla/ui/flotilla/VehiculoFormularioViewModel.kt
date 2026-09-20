@@ -2,12 +2,23 @@ package com.transandina.flotilla.ui.flotilla
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.transandina.flotilla.data.model.EstadoCuenta
+import com.transandina.flotilla.data.model.PersonaResumen
 import com.transandina.flotilla.data.model.ReasignarConductorParams
+import com.transandina.flotilla.data.model.RegistroKilometraje
+import com.transandina.flotilla.data.model.RolUsuario
 import com.transandina.flotilla.data.model.TIPOS_VEHICULO
+import com.transandina.flotilla.data.model.Usuario
 import com.transandina.flotilla.data.model.VehiculoPayload
+import com.transandina.flotilla.data.repository.AuthRepository
+import com.transandina.flotilla.data.repository.KilometrajeRepository
+import com.transandina.flotilla.data.repository.UsuarioRepository
 import com.transandina.flotilla.data.repository.VehiculoRepository
 import com.transandina.flotilla.domain.aFechaIso
+import com.transandina.flotilla.domain.interpretarKilometros
 import com.transandina.flotilla.domain.parsearFechaIso
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -23,11 +34,21 @@ data class VehiculoFormularioUiState(
     val marca: String = "",
     val modelo: String = "",
     val capacidad: String = "",
+    /** Primera lectura del odómetro; solo se pide al registrar. */
+    val kmInicial: String = "",
     val fechaMarchamo: LocalDate? = null,
     val fechaRevisionTecnica: LocalDate? = null,
     val fechaSeguro: LocalDate? = null,
     val fechaPermisoCarga: LocalDate? = null,
     val activo: Boolean = true,
+    /** Conductores activos que pueden tomar este vehículo. */
+    val conductores: List<Usuario> = emptyList(),
+    /** Mecánicos activos, de `mecanicos_disponibles()`. */
+    val mecanicos: List<PersonaResumen> = emptyList(),
+    val conductorId: String? = null,
+    val mecanicoId: String? = null,
+    /** El conductor que tenía al abrir: si cambia, se llama a la reasignación. */
+    val conductorOriginalId: String? = null,
     /** Con conductor asignado, darlo de baja también lo libera. */
     val tieneConductor: Boolean = false,
     val cargando: Boolean = false,
@@ -36,22 +57,66 @@ data class VehiculoFormularioUiState(
     val guardado: Boolean = false
 ) {
     val esEdicion: Boolean get() = vehiculoId != null
+
+    val nombreConductor: String?
+        get() = conductores.find { it.id == conductorId }?.nombreCompleto
+
+    val nombreMecanico: String?
+        get() = mecanicos.find { it.id == mecanicoId }?.nombreCompleto
 }
 
 /** Registrar un vehículo nuevo o editar uno existente (solo encargado). */
 class VehiculoFormularioViewModel(
-    private val vehiculoRepository: VehiculoRepository = VehiculoRepository()
+    private val vehiculoRepository: VehiculoRepository = VehiculoRepository(),
+    private val usuarioRepository: UsuarioRepository = UsuarioRepository(),
+    private val kilometrajeRepository: KilometrajeRepository = KilometrajeRepository(),
+    private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VehiculoFormularioUiState())
     val uiState: StateFlow<VehiculoFormularioUiState> = _uiState
 
-    /** Con [vehiculoId] carga los datos actuales para editarlos. Solo carga una vez. */
+    /**
+     * Carga los catálogos (conductores libres y mecánicos activos) y, con
+     * [vehiculoId], los datos del vehículo para editarlos. Solo carga una vez.
+     */
     fun iniciar(vehiculoId: String?) {
-        if (vehiculoId == null || _uiState.value.vehiculoId == vehiculoId) return
+        val actual = _uiState.value
+        val yaCargado = actual.conductores.isNotEmpty() || actual.mecanicos.isNotEmpty()
+        if (yaCargado && (vehiculoId == null || actual.vehiculoId == vehiculoId)) return
+
         viewModelScope.launch {
             _uiState.update { it.copy(vehiculoId = vehiculoId, cargando = true, error = null) }
             try {
+                coroutineScope {
+                    val usuarios = async { usuarioRepository.obtenerUsuarios() }
+                    val flotilla = async { vehiculoRepository.obtenerFlotilla() }
+                    val mecanicos = async {
+                        runCatching { vehiculoRepository.obtenerMecanicos() }.getOrDefault(emptyList())
+                    }
+
+                    // Un conductor solo puede tener un vehículo activo, así que
+                    // la lista deja fuera a los que ya tienen otro.
+                    val ocupados = flotilla.await()
+                        .filter { it.activo && it.id != vehiculoId }
+                        .mapNotNull { it.conductorId }
+                        .toSet()
+                    val conductores = usuarios.await().filter {
+                        it.rol == RolUsuario.conductor &&
+                            it.estado == EstadoCuenta.activo &&
+                            it.id !in ocupados
+                    }
+
+                    _uiState.update {
+                        it.copy(conductores = conductores, mecanicos = mecanicos.await())
+                    }
+                }
+
+                if (vehiculoId == null) {
+                    _uiState.update { it.copy(cargando = false) }
+                    return@launch
+                }
+
                 val vehiculo = vehiculoRepository.obtenerVehiculoPorId(vehiculoId)
                 if (vehiculo == null) {
                     _uiState.update { it.copy(cargando = false, error = "No encontramos ese vehículo") }
@@ -70,6 +135,9 @@ class VehiculoFormularioViewModel(
                         fechaSeguro = parsearFechaIso(vehiculo.fechaSeguro),
                         fechaPermisoCarga = parsearFechaIso(vehiculo.fechaPermisoCarga),
                         activo = vehiculo.activo,
+                        conductorId = vehiculo.conductorId,
+                        conductorOriginalId = vehiculo.conductorId,
+                        mecanicoId = vehiculo.mecanicoId,
                         tieneConductor = vehiculo.conductorId != null,
                         cargando = false
                     )
@@ -88,10 +156,13 @@ class VehiculoFormularioViewModel(
     fun onMarcaChange(valor: String) = _uiState.update { it.copy(marca = valor, error = null) }
     fun onModeloChange(valor: String) = _uiState.update { it.copy(modelo = valor, error = null) }
     fun onCapacidadChange(valor: String) = _uiState.update { it.copy(capacidad = valor, error = null) }
+    fun onKmInicialChange(valor: String) = _uiState.update { it.copy(kmInicial = valor, error = null) }
     fun onFechaMarchamoChange(fecha: LocalDate) = _uiState.update { it.copy(fechaMarchamo = fecha, error = null) }
     fun onFechaRevisionChange(fecha: LocalDate) = _uiState.update { it.copy(fechaRevisionTecnica = fecha, error = null) }
     fun onFechaSeguroChange(fecha: LocalDate) = _uiState.update { it.copy(fechaSeguro = fecha, error = null) }
     fun onFechaPermisoChange(fecha: LocalDate) = _uiState.update { it.copy(fechaPermisoCarga = fecha, error = null) }
+    fun onConductorChange(id: String?) = _uiState.update { it.copy(conductorId = id, error = null) }
+    fun onMecanicoChange(id: String?) = _uiState.update { it.copy(mecanicoId = id, error = null) }
 
     fun guardar() {
         val s = _uiState.value
@@ -107,6 +178,9 @@ class VehiculoFormularioViewModel(
             anio == null || anio !in 1950..anioMaximo -> "Ingresa un año entre 1950 y $anioMaximo"
             capacidadTexto.isNotEmpty() && (capacidad == null || capacidad < 0) ->
                 "La capacidad debe ser un número en toneladas"
+            !s.esEdicion && s.kmInicial.isNotBlank() &&
+                (interpretarKilometros(s.kmInicial)?.let { it < 0 } ?: true) ->
+                "El kilometraje debe ser un número de kilómetros"
             else -> null
         }
         if (error != null) {
@@ -124,18 +198,66 @@ class VehiculoFormularioViewModel(
             fechaMarchamo = s.fechaMarchamo?.let(::aFechaIso),
             fechaRevisionTecnica = s.fechaRevisionTecnica?.let(::aFechaIso),
             fechaSeguro = s.fechaSeguro?.let(::aFechaIso),
-            fechaPermisoCarga = s.fechaPermisoCarga?.let(::aFechaIso)
+            fechaPermisoCarga = s.fechaPermisoCarga?.let(::aFechaIso),
+            mecanicoId = s.mecanicoId
         )
 
         viewModelScope.launch {
             _uiState.update { it.copy(guardando = true, error = null) }
             try {
-                if (s.vehiculoId == null) {
-                    vehiculoRepository.registrarVehiculo(datos)
+                // El conductor no va en el payload: pasa por la función
+                // `reasignar_conductor`, que valida y guarda el historial.
+                val id = if (s.vehiculoId == null) {
+                    val creado = vehiculoRepository.registrarVehiculo(datos)
+                    // Desde aquí el vehículo ya existe: si algo falla más
+                    // abajo, un segundo intento edita en vez de duplicar la placa.
+                    _uiState.update { it.copy(vehiculoId = creado.id) }
+                    creado.id
                 } else {
                     vehiculoRepository.actualizarVehiculo(s.vehiculoId, datos)
+                    s.vehiculoId
                 }
-                _uiState.update { it.copy(guardando = false, guardado = true) }
+
+                // El kilometraje inicial se guarda como la primera lectura del
+                // odómetro, no como un campo del vehículo: así queda en el
+                // historial y el trigger trg_actualizar_km pone km_actual.
+                val kmInicial = interpretarKilometros(s.kmInicial)
+                if (s.vehiculoId == null && kmInicial != null && kmInicial > 0) {
+                    val usuarioId = authRepository.usuarioActualId()
+                    if (usuarioId != null) {
+                        kilometrajeRepository.registrarKilometraje(
+                            RegistroKilometraje(
+                                vehiculoId = id,
+                                registradoPor = usuarioId,
+                                fecha = aFechaIso(LocalDate.now()),
+                                km = kmInicial
+                            )
+                        )
+                    }
+                }
+                if (s.conductorId != s.conductorOriginalId) {
+                    vehiculoRepository.reasignarConductor(
+                        ReasignarConductorParams(
+                            vehiculoId = id,
+                            conductorNuevoId = s.conductorId,
+                            fechaEfectiva = aFechaIso(LocalDate.now()),
+                            motivo = if (s.vehiculoId == null) {
+                                "Asignado al registrar el vehículo"
+                            } else {
+                                "Cambio desde la edición del vehículo"
+                            }
+                        )
+                    )
+                }
+                _uiState.update {
+                    it.copy(
+                        guardando = false,
+                        guardado = true,
+                        vehiculoId = id,
+                        conductorOriginalId = s.conductorId,
+                        tieneConductor = s.conductorId != null
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(guardando = false, error = mensajeDeError(e)) }
             }
@@ -179,6 +301,10 @@ class VehiculoFormularioViewModel(
         return when {
             detalle.contains("vehiculos_placa_key") || detalle.contains("duplicate key", ignoreCase = true) ->
                 "Ya existe un vehículo con esa placa"
+            detalle.contains("ya tiene un vehículo asignado") ->
+                "Ese conductor ya tiene otro vehículo asignado"
+            detalle.contains("cuenta activa") -> "El conductor elegido no está activo"
+            detalle.contains("rol mecánico") -> "El mecánico elegido no está activo"
             detalle.contains("row-level security", ignoreCase = true) ->
                 "Solo el encargado de flota puede registrar o editar vehículos"
             else -> "No se pudo guardar. Intenta de nuevo"

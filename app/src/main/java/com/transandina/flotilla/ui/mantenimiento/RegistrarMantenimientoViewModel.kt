@@ -3,12 +3,14 @@ package com.transandina.flotilla.ui.mantenimiento
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.transandina.flotilla.data.model.EditarMantenimientoPayload
 import com.transandina.flotilla.data.model.FrecuenciaMantenimiento
 import com.transandina.flotilla.data.model.NuevoMantenimientoPayload
 import com.transandina.flotilla.data.model.TipoMantenimiento
 import com.transandina.flotilla.data.model.Vehiculo
 import com.transandina.flotilla.data.repository.AuthRepository
 import com.transandina.flotilla.data.repository.MantenimientoRepository
+import com.transandina.flotilla.data.repository.UsuarioRepository
 import com.transandina.flotilla.data.repository.VehiculoRepository
 import com.transandina.flotilla.domain.ServicioEstimado
 import com.transandina.flotilla.domain.aFechaIso
@@ -16,6 +18,7 @@ import com.transandina.flotilla.domain.estimarSiguienteServicio
 import com.transandina.flotilla.domain.formatearKilometrosConUnidad
 import com.transandina.flotilla.domain.interpretarKilometros
 import com.transandina.flotilla.domain.interpretarMonto
+import com.transandina.flotilla.domain.parsearFechaIso
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,7 +43,11 @@ class FotoAdjunta(
 )
 
 data class RegistrarMantenimientoUiState(
+    /** Id del mantenimiento que se está corrigiendo; null al registrar uno nuevo. */
+    val mantenimientoId: String? = null,
     val vehiculo: Vehiculo? = null,
+    /** Vehículos sobre los que esta persona puede registrar. El mecánico suele tener varios. */
+    val vehiculosDisponibles: List<Vehiculo> = emptyList(),
     val frecuencias: List<FrecuenciaMantenimiento> = emptyList(),
     val tipo: TipoMantenimiento? = null,
     val categoria: String? = null,
@@ -55,9 +62,12 @@ data class RegistrarMantenimientoUiState(
     val guardando: Boolean = false,
     val error: String? = null,
     val guardado: Boolean = false,
+    val eliminando: Boolean = false,
+    val eliminado: Boolean = false,
     /** Cuántas fotos no se pudieron subir aunque el mantenimiento sí se guardó. */
     val fotosFallidas: Int = 0
 ) {
+    val esEdicion: Boolean get() = mantenimientoId != null
     /** Categorías del catálogo para el tipo de este vehículo, con "Otro" al final. */
     val categorias: List<String>
         get() = frecuencias
@@ -67,6 +77,9 @@ data class RegistrarMantenimientoUiState(
             .sortedWith(compareBy({ it == CATEGORIA_OTRO }, { it }))
 
     val puedeAdjuntar: Boolean get() = fotos.size < MAXIMO_FOTOS
+
+    /** Con más de uno hay que elegir sobre cuál se registra. */
+    val hayQueElegirVehiculo: Boolean get() = !esEdicion && vehiculosDisponibles.size > 1
 
     /**
      * El servicio se hizo con más kilómetros de los que tiene registrados el
@@ -90,14 +103,16 @@ data class RegistrarMantenimientoUiState(
 }
 
 /**
- * Registro de un mantenimiento sobre un vehículo (Figma `49:161`). Por ahora
- * lo abre el encargado desde el detalle del vehículo; la misma pantalla
- * servirá para el conductor más adelante.
+ * Registro de un mantenimiento sobre un vehículo (Figma `49:161`). La misma
+ * pantalla sirve para los tres roles: el encargado entra desde el detalle de
+ * cualquier vehículo, el conductor la tiene como pestaña sobre su vehículo
+ * asignado y el mecánico elige entre los que tiene a cargo.
  */
 class RegistrarMantenimientoViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
     private val vehiculoRepository: VehiculoRepository = VehiculoRepository(),
-    private val mantenimientoRepository: MantenimientoRepository = MantenimientoRepository()
+    private val mantenimientoRepository: MantenimientoRepository = MantenimientoRepository(),
+    private val usuarioRepository: UsuarioRepository = UsuarioRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegistrarMantenimientoUiState())
@@ -112,43 +127,84 @@ class RegistrarMantenimientoViewModel(
         viewModelScope.launch {
             val actualizado = runCatching { vehiculoRepository.obtenerVehiculoPorId(vehiculoId) }
                 .getOrNull() ?: return@launch
-            _uiState.update { it.copy(vehiculo = actualizado, error = null) }
+            _uiState.update { estado ->
+                estado.copy(
+                    vehiculo = actualizado,
+                    vehiculosDisponibles = estado.vehiculosDisponibles.map { v ->
+                        if (v.id == actualizado.id) actualizado else v
+                    },
+                    error = null
+                )
+            }
         }
     }
 
     /**
-     * Carga el vehículo sobre el que se va a registrar. Sin [vehiculoId] se usa
-     * el vehículo asignado al conductor con sesión iniciada, que es como se
-     * entra desde la pestaña Mantenimiento.
+     * Carga los vehículos sobre los que se puede registrar. Con [vehiculoId]
+     * es uno solo (se entra desde el detalle); sin él, los propios de quien
+     * tiene la sesión: el asignado como conductor y los que tiene a cargo
+     * como mecánico. Si queda uno solo, se selecciona sin preguntar.
+     *
+     * @param esMecanico rellena el responsable con su propio nombre, que es
+     *   lo que la rúbrica llama "taller o mecánico responsable".
      */
-    fun cargar(vehiculoId: String?) {
-        val actual = _uiState.value.vehiculo
-        if (actual != null && (vehiculoId == null || actual.id == vehiculoId)) return
+    fun cargar(vehiculoId: String?, esMecanico: Boolean = false, mantenimientoId: String? = null) {
+        if (mantenimientoId != null) {
+            cargarParaEditar(mantenimientoId)
+            return
+        }
+        val actual = _uiState.value
+        val yaCargado = actual.vehiculo != null || actual.vehiculosDisponibles.isNotEmpty()
+        if (yaCargado && (vehiculoId == null || actual.vehiculo?.id == vehiculoId)) return
+
         viewModelScope.launch {
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
+                val usuarioId = authRepository.usuarioActualId()
                 coroutineScope {
-                    val vehiculo = async {
+                    val disponibles = async {
                         if (vehiculoId != null) {
-                            vehiculoRepository.obtenerVehiculoPorId(vehiculoId)
+                            listOfNotNull(vehiculoRepository.obtenerVehiculoPorId(vehiculoId))
+                        } else if (usuarioId != null) {
+                            // Un conductor no tiene vehículos a cargo y un
+                            // mecánico no tiene vehículo asignado: cada
+                            // consulta devuelve vacío para el otro rol.
+                            val asignado = runCatching {
+                                vehiculoRepository.obtenerVehiculoAsignado(usuarioId)
+                            }.getOrNull()
+                            val aCargo = runCatching {
+                                vehiculoRepository.obtenerVehiculosDeMecanico(usuarioId)
+                            }.getOrDefault(emptyList())
+                            (listOfNotNull(asignado) + aCargo).distinctBy { v -> v.id }
                         } else {
-                            authRepository.usuarioActualId()
-                                ?.let { vehiculoRepository.obtenerVehiculoAsignado(it) }
+                            emptyList()
                         }
                     }
                     val frecuencias = async { mantenimientoRepository.obtenerFrecuencias() }
-                    val encontrado = vehiculo.await()
+                    val responsable = async {
+                        if (!esMecanico || usuarioId == null) {
+                            ""
+                        } else {
+                            runCatching { usuarioRepository.obtenerPerfil(usuarioId) }
+                                .getOrNull()?.nombreCompleto.orEmpty()
+                        }
+                    }
+
+                    val lista = disponibles.await()
+                    val elegido = lista.singleOrNull()
                     _uiState.update {
                         it.copy(
-                            vehiculo = encontrado,
+                            vehiculo = elegido,
+                            vehiculosDisponibles = lista,
                             frecuencias = frecuencias.await(),
+                            responsable = responsable.await().ifBlank { it.responsable },
                             // Se propone el km actual: es lo más común al registrar el mismo día.
-                            km = encontrado?.kmActual?.toLong()?.toString().orEmpty(),
+                            km = elegido?.kmActual?.toLong()?.toString().orEmpty(),
                             cargando = false,
                             error = when {
-                                encontrado != null -> null
+                                lista.isNotEmpty() -> null
                                 vehiculoId != null -> "No encontramos ese vehículo"
-                                else -> null // Sin vehículo asignado: lo explica la pantalla
+                                else -> null // Sin vehículos: lo explica la pantalla
                             }
                         )
                     }
@@ -157,6 +213,60 @@ class RegistrarMantenimientoViewModel(
                 _uiState.update { it.copy(cargando = false, error = "No se pudo cargar el vehículo") }
             }
         }
+    }
+
+    /**
+     * Trae un mantenimiento ya registrado para que el encargado lo corrija
+     * (política `mantenimientos_update`). Las fotos no se tocan al editar:
+     * `fotos_insert` solo deja adjuntar a quien registró el servicio.
+     */
+    private fun cargarParaEditar(mantenimientoId: String) {
+        if (_uiState.value.mantenimientoId == mantenimientoId) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(mantenimientoId = mantenimientoId, cargando = true, error = null) }
+            try {
+                val mantenimiento = mantenimientoRepository.obtenerPorId(mantenimientoId)
+                if (mantenimiento == null) {
+                    _uiState.update {
+                        it.copy(cargando = false, error = "No encontramos ese mantenimiento")
+                    }
+                    return@launch
+                }
+                coroutineScope {
+                    val vehiculo = async {
+                        vehiculoRepository.obtenerVehiculoPorId(mantenimiento.vehiculoId)
+                    }
+                    val frecuencias = async { mantenimientoRepository.obtenerFrecuencias() }
+                    val encontrado = vehiculo.await()
+                    _uiState.update {
+                        it.copy(
+                            vehiculo = encontrado,
+                            vehiculosDisponibles = listOfNotNull(encontrado),
+                            frecuencias = frecuencias.await(),
+                            tipo = mantenimiento.tipo,
+                            categoria = mantenimiento.categoria,
+                            fecha = parsearFechaIso(mantenimiento.fecha) ?: LocalDate.now(),
+                            km = mantenimiento.km.toLong().toString(),
+                            taller = mantenimiento.taller.orEmpty(),
+                            responsable = mantenimiento.responsable.orEmpty(),
+                            costo = mantenimiento.costo?.toLong()?.toString().orEmpty(),
+                            descripcion = mantenimiento.descripcion.orEmpty(),
+                            cargando = false
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(cargando = false, error = "No se pudo cargar el mantenimiento")
+                }
+            }
+        }
+    }
+
+    /** Cambia el vehículo elegido y propone su kilometraje actual. */
+    fun onVehiculoChange(vehiculoId: String) = editar { estado ->
+        val elegido = estado.vehiculosDisponibles.find { it.id == vehiculoId } ?: return@editar estado
+        estado.copy(vehiculo = elegido, km = elegido.kmActual.toLong().toString())
     }
 
     // Cualquier edición limpia el error y el aviso de "guardado" anterior.
@@ -230,6 +340,23 @@ class RegistrarMantenimientoViewModel(
             return
         }
 
+        if (s.esEdicion) {
+            actualizar(
+                mantenimientoId = s.mantenimientoId!!,
+                datos = EditarMantenimientoPayload(
+                    tipo = s.tipo!!,
+                    categoria = s.categoria!!,
+                    fecha = aFechaIso(s.fecha),
+                    km = km!!,
+                    responsable = s.responsable.trim().ifBlank { null },
+                    descripcion = s.descripcion.trim().ifBlank { null },
+                    costo = costo!!,
+                    taller = s.taller.trim()
+                )
+            )
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(guardando = true, error = null) }
             val registrado = try {
@@ -263,6 +390,32 @@ class RegistrarMantenimientoViewModel(
                 }
             }
             _uiState.update { it.copy(guardando = false, guardado = true, fotosFallidas = fallidas) }
+        }
+    }
+
+    private fun actualizar(mantenimientoId: String, datos: EditarMantenimientoPayload) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(guardando = true, error = null) }
+            try {
+                mantenimientoRepository.actualizar(mantenimientoId, datos)
+                _uiState.update { it.copy(guardando = false, guardado = true) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(guardando = false, error = mensajeDeError(e)) }
+            }
+        }
+    }
+
+    /** Borra el registro y sus fotos. La pantalla ya pidió confirmación. */
+    fun eliminar() {
+        val mantenimientoId = _uiState.value.mantenimientoId ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(eliminando = true, error = null) }
+            try {
+                mantenimientoRepository.eliminar(mantenimientoId)
+                _uiState.update { it.copy(eliminando = false, eliminado = true) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(eliminando = false, error = mensajeDeError(e)) }
+            }
         }
     }
 

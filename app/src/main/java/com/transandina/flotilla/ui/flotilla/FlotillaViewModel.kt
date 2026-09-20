@@ -71,7 +71,8 @@ class FlotillaViewModel(
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
                 val datos = flotillaRepository.cargar()
-                val nombres = datos.usuarios.associate { it.id to it.nombreCompleto }
+                val nombres = datos.usuarios.associate { it.id to it.nombreCompleto } +
+                    datos.personas.associate { it.id to it.nombreCompleto }
                 val mantenimientosPorVehiculo = datos.mantenimientos.groupBy { it.vehiculoId }
                 val resumenes = datos.vehiculos.map { vehiculo ->
                     resumirVehiculo(

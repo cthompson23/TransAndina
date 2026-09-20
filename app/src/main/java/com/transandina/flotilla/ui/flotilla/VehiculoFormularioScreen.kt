@@ -78,10 +78,13 @@ fun VehiculoFormularioScreen(
             onMarca = viewModel::onMarcaChange,
             onModelo = viewModel::onModeloChange,
             onCapacidad = viewModel::onCapacidadChange,
+            onKmInicial = viewModel::onKmInicialChange,
             onMarchamo = viewModel::onFechaMarchamoChange,
             onRevision = viewModel::onFechaRevisionChange,
             onSeguro = viewModel::onFechaSeguroChange,
             onPermiso = viewModel::onFechaPermisoChange,
+            onConductor = viewModel::onConductorChange,
+            onMecanico = viewModel::onMecanicoChange,
             onGuardar = viewModel::guardar,
             onCambiarActivo = viewModel::cambiarActivo,
             onCancelar = onAtras
@@ -97,10 +100,13 @@ private data class AccionesVehiculoFormulario(
     val onMarca: (String) -> Unit = {},
     val onModelo: (String) -> Unit = {},
     val onCapacidad: (String) -> Unit = {},
+    val onKmInicial: (String) -> Unit = {},
     val onMarchamo: (LocalDate) -> Unit = {},
     val onRevision: (LocalDate) -> Unit = {},
     val onSeguro: (LocalDate) -> Unit = {},
     val onPermiso: (LocalDate) -> Unit = {},
+    val onConductor: (String?) -> Unit = {},
+    val onMecanico: (String?) -> Unit = {},
     val onGuardar: () -> Unit = {},
     val onCambiarActivo: (Boolean) -> Unit = {},
     val onCancelar: () -> Unit = {}
@@ -198,6 +204,65 @@ private fun ContenidoVehiculoFormulario(
                 marcadorDePosicion = stringResource(R.string.vehiculo_form_capacidad_marcador),
                 forma = FormaPildora,
                 tipoTeclado = KeyboardType.Decimal,
+                habilitado = editable
+            )
+            // Al editar no se pide: el kilometraje solo se mueve registrando
+            // lecturas, que es lo que valida el trigger de la base.
+            if (!uiState.esEdicion) {
+                CampoTexto(
+                    etiqueta = stringResource(R.string.kilometraje_actual),
+                    valor = uiState.kmInicial,
+                    onValorCambia = acciones.onKmInicial,
+                    marcadorDePosicion = stringResource(R.string.vehiculo_form_km_marcador),
+                    forma = FormaPildora,
+                    tipoTeclado = KeyboardType.Number,
+                    habilitado = editable
+                )
+                Text(
+                    text = stringResource(R.string.vehiculo_form_km_ayuda),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TransAndinaTheme.colores.textoSecundario
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.vehiculo_form_asignacion),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                text = stringResource(R.string.vehiculo_form_asignacion_ayuda),
+                style = MaterialTheme.typography.bodySmall,
+                color = TransAndinaTheme.colores.textoSecundario
+            )
+
+            val sinConductor = stringResource(R.string.sin_conductor)
+            val noDisponible = stringResource(R.string.detalle_conductor_no_disponible)
+            CampoSeleccion(
+                etiqueta = stringResource(R.string.detalle_conductor_asignado),
+                seleccion = uiState.nombreConductor
+                    ?: if (uiState.conductorId != null) noDisponible else sinConductor,
+                opciones = listOf(sinConductor) + uiState.conductores.map { it.nombreCompleto },
+                onSeleccionar = { nombre ->
+                    acciones.onConductor(uiState.conductores.find { it.nombreCompleto == nombre }?.id)
+                },
+                marcadorDePosicion = sinConductor,
+                forma = FormaPildora,
+                habilitado = editable
+            )
+
+            val sinMecanico = stringResource(R.string.sin_mecanico)
+            CampoSeleccion(
+                etiqueta = stringResource(R.string.detalle_mecanico_asignado),
+                seleccion = uiState.nombreMecanico
+                    ?: if (uiState.mecanicoId != null) noDisponible else sinMecanico,
+                opciones = listOf(sinMecanico) + uiState.mecanicos.map { it.nombreCompleto },
+                onSeleccionar = { nombre ->
+                    acciones.onMecanico(uiState.mecanicos.find { it.nombreCompleto == nombre }?.id)
+                },
+                marcadorDePosicion = sinMecanico,
+                forma = FormaPildora,
                 habilitado = editable
             )
 

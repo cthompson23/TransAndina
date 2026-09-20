@@ -63,6 +63,7 @@ import com.transandina.flotilla.ui.components.BotonSecundario
 import com.transandina.flotilla.ui.components.CampoFecha
 import com.transandina.flotilla.ui.components.CampoSeleccion
 import com.transandina.flotilla.ui.components.CampoTexto
+import com.transandina.flotilla.ui.components.DialogoConfirmacion
 import com.transandina.flotilla.ui.components.EstadoVacio
 import com.transandina.flotilla.ui.components.FilaBotonesFormulario
 import com.transandina.flotilla.ui.components.TarjetaTransAndina
@@ -81,11 +82,17 @@ import java.time.LocalDate
  * pide el kilometraje del servicio, el taller y una descripción
  * (docs/ADAPTACION_MOVIL.md §7), y muestra cuándo tocaría el siguiente.
  *
- * Sirve para los dos casos: el encargado entra desde el detalle de un vehículo
- * (con [vehiculoId] y flecha de atrás), y el conductor la ve como su pestaña
- * Mantenimiento, sobre su vehículo asignado ([enPestana]).
+ * Sirve para los tres roles: el encargado entra desde el detalle de un
+ * vehículo (con [vehiculoId] y flecha de atrás), el conductor la ve como su
+ * pestaña Mantenimiento sobre su vehículo asignado ([enPestana]) y el
+ * mecánico, también como pestaña, eligiendo entre los que tiene a cargo.
  *
- * @param vehiculoId null = el vehículo asignado a quien tiene la sesión.
+ * @param vehiculoId null = los vehículos propios de quien tiene la sesión.
+ * @param esMecanico cambia el mensaje de "sin vehículos" y propone su nombre
+ *   como responsable del servicio.
+ * @param mantenimientoId corrige un registro que ya existe, en vez de crear
+ *   uno nuevo. Solo el encargado (políticas `mantenimientos_update` y
+ *   `mantenimientos_delete`).
  */
 @Composable
 fun RegistrarMantenimientoScreen(
@@ -93,6 +100,8 @@ fun RegistrarMantenimientoScreen(
     viewModel: RegistrarMantenimientoViewModel = viewModel(),
     tokenRecarga: Int = 0,
     enPestana: Boolean = false,
+    esMecanico: Boolean = false,
+    mantenimientoId: String? = null,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (vehiculoId: String) -> Unit = {},
     onGuardado: () -> Unit = {}
@@ -106,14 +115,18 @@ fun RegistrarMantenimientoScreen(
     val mensajeFormato = stringResource(R.string.mant_foto_formato_invalido)
     val mensajeFotoFallida = stringResource(R.string.mant_foto_no_se_pudo_leer)
 
-    LaunchedEffect(vehiculoId) {
-        viewModel.cargar(vehiculoId)
+    LaunchedEffect(vehiculoId, mantenimientoId) {
+        viewModel.cargar(vehiculoId, esMecanico, mantenimientoId)
     }
 
     // Al volver de registrar el kilometraje, se relee el vehículo para que la
     // nueva lectura valga; lo escrito en el formulario se conserva.
     LaunchedEffect(tokenRecarga) {
         if (tokenRecarga > 0) viewModel.recargarVehiculo()
+    }
+
+    LaunchedEffect(uiState.eliminado) {
+        if (uiState.eliminado) onGuardado()
     }
 
     LaunchedEffect(uiState.guardado) {
@@ -163,7 +176,9 @@ fun RegistrarMantenimientoScreen(
         uiState = uiState,
         preparandoFotos = preparandoFotos,
         enPestana = enPestana,
+        esMecanico = esMecanico,
         acciones = AccionesMantenimiento(
+            onVehiculo = viewModel::onVehiculoChange,
             onTipo = viewModel::onTipoChange,
             onCategoria = viewModel::onCategoriaChange,
             onFecha = viewModel::onFechaChange,
@@ -180,12 +195,14 @@ fun RegistrarMantenimientoScreen(
             onQuitarFoto = viewModel::onFotoQuitada,
             onRegistrarKilometraje = { uiState.vehiculo?.let { onRegistrarKilometraje(it.id) } },
             onGuardar = viewModel::guardar,
+            onEliminar = viewModel::eliminar,
             onCancelar = { if (enPestana) viewModel.limpiarFormulario() else onAtras() }
         )
     )
 }
 
 private data class AccionesMantenimiento(
+    val onVehiculo: (String) -> Unit = {},
     val onTipo: (TipoMantenimiento) -> Unit = {},
     val onCategoria: (String) -> Unit = {},
     val onFecha: (LocalDate) -> Unit = {},
@@ -198,6 +215,7 @@ private data class AccionesMantenimiento(
     val onQuitarFoto: (String) -> Unit = {},
     val onRegistrarKilometraje: () -> Unit = {},
     val onGuardar: () -> Unit = {},
+    val onEliminar: () -> Unit = {},
     val onCancelar: () -> Unit = {}
 )
 
@@ -206,10 +224,12 @@ private fun ContenidoRegistrarMantenimiento(
     uiState: RegistrarMantenimientoUiState,
     preparandoFotos: Boolean,
     enPestana: Boolean = false,
+    esMecanico: Boolean = false,
     acciones: AccionesMantenimiento
 ) {
     val vehiculo = uiState.vehiculo
-    val editable = !uiState.guardando
+    var confirmarEliminar by remember { mutableStateOf(false) }
+    val editable = !uiState.guardando && !uiState.eliminando
 
     Column(
         modifier = Modifier
@@ -217,7 +237,11 @@ private fun ContenidoRegistrarMantenimiento(
             .background(MaterialTheme.colorScheme.background)
     ) {
         TransAndinaTopBar(
-            titulo = stringResource(R.string.mant_titulo),
+            titulo = if (uiState.esEdicion) {
+                stringResource(R.string.mant_titulo_editar)
+            } else {
+                stringResource(R.string.mant_titulo)
+            },
             subtitulo = vehiculo?.let { "${it.placa} · ${it.marca} ${it.modelo}" },
             // En la pestaña del conductor no hay pantalla anterior.
             onAtras = if (enPestana) null else acciones.onCancelar
@@ -231,12 +255,20 @@ private fun ContenidoRegistrarMantenimiento(
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
 
+            // El mecánico con varios vehículos elige antes de ver el formulario.
+            vehiculo == null && uiState.vehiculosDisponibles.isNotEmpty() -> Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SelectorVehiculo(uiState = uiState, habilitado = true, onVehiculo = acciones.onVehiculo)
+            }
+
             vehiculo == null -> Box(modifier = Modifier.padding(16.dp)) {
                 EstadoVacio(
-                    mensaje = uiState.error ?: if (enPestana) {
-                        stringResource(R.string.vehiculo_sin_asignar)
-                    } else {
-                        stringResource(R.string.detalle_no_encontrado)
+                    mensaje = uiState.error ?: when {
+                        esMecanico -> stringResource(R.string.mecanico_sin_vehiculos_mantenimiento)
+                        enPestana -> stringResource(R.string.vehiculo_sin_asignar)
+                        else -> stringResource(R.string.detalle_no_encontrado)
                     }
                 )
             }
@@ -248,6 +280,14 @@ private fun ContenidoRegistrarMantenimiento(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                if (uiState.hayQueElegirVehiculo) {
+                    SelectorVehiculo(
+                        uiState = uiState,
+                        habilitado = editable,
+                        onVehiculo = acciones.onVehiculo
+                    )
+                }
+
                 val preventivo = etiquetaTipoMantenimiento(TipoMantenimiento.preventivo)
                 val correctivo = etiquetaTipoMantenimiento(TipoMantenimiento.correctivo)
 
@@ -358,13 +398,21 @@ private fun ContenidoRegistrarMantenimiento(
                     lineas = 3
                 )
 
-                SeccionFotos(
-                    fotos = uiState.fotos,
-                    puedeAdjuntar = uiState.puedeAdjuntar && editable && !preparandoFotos,
-                    preparando = preparandoFotos,
-                    onAdjuntar = acciones.onAdjuntar,
-                    onQuitar = acciones.onQuitarFoto
-                )
+                if (uiState.esEdicion) {
+                    Text(
+                        text = stringResource(R.string.mant_editar_sin_fotos),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TransAndinaTheme.colores.textoSecundario
+                    )
+                } else {
+                    SeccionFotos(
+                        fotos = uiState.fotos,
+                        puedeAdjuntar = uiState.puedeAdjuntar && editable && !preparandoFotos,
+                        preparando = preparandoFotos,
+                        onAdjuntar = acciones.onAdjuntar,
+                        onQuitar = acciones.onQuitarFoto
+                    )
+                }
 
                 TarjetaEstimado(
                     categoria = uiState.categoria,
@@ -400,14 +448,66 @@ private fun ContenidoRegistrarMantenimiento(
                     } else {
                         stringResource(R.string.cancelar)
                     },
-                    accionHabilitada = !preparandoFotos,
+                    accionHabilitada = !preparandoFotos && !uiState.eliminando,
                     cargando = uiState.guardando
                 )
+
+                if (uiState.esEdicion) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    BotonSecundario(
+                        texto = stringResource(R.string.mant_eliminar),
+                        onClick = { confirmarEliminar = true },
+                        habilitado = !uiState.eliminando && !uiState.guardando,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
+
+    if (confirmarEliminar && vehiculo != null) {
+        DialogoConfirmacion(
+            titulo = stringResource(R.string.mant_eliminar_dialogo_titulo),
+            mensaje = stringResource(
+                R.string.mant_eliminar_dialogo,
+                uiState.categoria.orEmpty(),
+                formatearFecha(uiState.fecha)
+            ),
+            textoConfirmar = stringResource(R.string.eliminar),
+            destructiva = true,
+            onConfirmar = {
+                confirmarEliminar = false
+                acciones.onEliminar()
+            },
+            onCancelar = { confirmarEliminar = false }
+        )
+    }
+}
+
+/** Lista de vehículos propios; solo aparece cuando hay más de uno. */
+@Composable
+private fun SelectorVehiculo(
+    uiState: RegistrarMantenimientoUiState,
+    habilitado: Boolean,
+    onVehiculo: (String) -> Unit
+) {
+    val etiquetas = remember(uiState.vehiculosDisponibles) {
+        uiState.vehiculosDisponibles.associate { v -> v.id to "${v.placa} · ${v.marca} ${v.modelo}" }
+    }
+
+    CampoSeleccion(
+        etiqueta = stringResource(R.string.mant_vehiculo),
+        seleccion = uiState.vehiculo?.let { etiquetas[it.id] },
+        opciones = etiquetas.values.toList(),
+        onSeleccionar = { elegida ->
+            etiquetas.entries.find { it.value == elegida }?.let { onVehiculo(it.key) }
+        },
+        marcadorDePosicion = stringResource(R.string.mant_vehiculo_marcador),
+        forma = FormaPildora,
+        habilitado = habilitado
+    )
 }
 
 /** "Evidencia fotográfica" (Figma `67:133`): botón punteado y las fotos elegidas. */

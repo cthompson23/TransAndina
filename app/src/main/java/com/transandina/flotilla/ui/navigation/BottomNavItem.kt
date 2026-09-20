@@ -44,8 +44,9 @@ sealed class BottomNavItem(
  * controla qué aparece en la barra inferior, no qué existe.
  *
  * - conductor: tiene un vehículo propio asignado, así que ve su detalle.
- * - mecánico: no tiene "un" vehículo, trabaja sobre cualquiera, así que
- *   no tiene sentido la pestaña Vehículo individual.
+ * - mecánico: puede tener varios vehículos a cargo, así que su Inicio es la
+ *   lista de esos vehículos y no hay pestaña Vehículo individual
+ *   (migración 202609201200).
  * - encargado: gestiona la flotilla completa y no registra mantenimientos
  *   él mismo: Flotilla · Alertas · Reportes · Usuarios · Perfil.
  */

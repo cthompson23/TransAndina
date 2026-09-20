@@ -1,5 +1,6 @@
 package com.transandina.flotilla.data.repository
 
+import com.transandina.flotilla.data.model.EditarMantenimientoPayload
 import com.transandina.flotilla.data.model.FotoMantenimiento
 import com.transandina.flotilla.data.model.FrecuenciaMantenimiento
 import com.transandina.flotilla.data.model.Mantenimiento
@@ -46,6 +47,14 @@ class MantenimientoRepository {
             .decodeList()
     }
 
+    suspend fun obtenerPorId(id: String): Mantenimiento? {
+        return SupabaseProvider.client.postgrest["mantenimientos"]
+            .select {
+                filter { eq("id", id) }
+            }
+            .decodeSingleOrNull()
+    }
+
     suspend fun obtenerFrecuencias(): List<FrecuenciaMantenimiento> {
         return SupabaseProvider.client.postgrest["frecuencias_mantenimiento"]
             .select {
@@ -84,6 +93,43 @@ class MantenimientoRepository {
         return SupabaseProvider.client.postgrest["mantenimientos"]
             .insert(datos) { select() }
             .decodeSingle()
+    }
+
+    /** Corrige un registro. Solo el encargado (política `mantenimientos_update`). */
+    suspend fun actualizar(id: String, datos: EditarMantenimientoPayload) {
+        SupabaseProvider.client.postgrest["mantenimientos"]
+            .update(datos) {
+                filter { eq("id", id) }
+            }
+    }
+
+    /**
+     * Borra el registro. Solo el encargado (política `mantenimientos_delete`).
+     * Las filas de `mantenimiento_fotos` se van solas (la FK es on delete
+     * cascade), pero los archivos del bucket no, así que se borran primero
+     * para no dejarlos huérfanos. Si esa parte falla, el registro igual se
+     * borra: un archivo suelto no se le muestra a nadie.
+     */
+    suspend fun eliminar(id: String) {
+        val fotos: List<FotoMantenimiento> = runCatching {
+            SupabaseProvider.client.postgrest["mantenimiento_fotos"]
+                .select {
+                    filter { eq("mantenimiento_id", id) }
+                }
+                .decodeList<FotoMantenimiento>()
+        }.getOrDefault(emptyList())
+
+        if (fotos.isNotEmpty()) {
+            runCatching {
+                SupabaseProvider.client.storage.from(BUCKET_FOTOS)
+                    .delete(fotos.map { it.rutaArchivo })
+            }
+        }
+
+        SupabaseProvider.client.postgrest["mantenimientos"]
+            .delete {
+                filter { eq("id", id) }
+            }
     }
 
     /**

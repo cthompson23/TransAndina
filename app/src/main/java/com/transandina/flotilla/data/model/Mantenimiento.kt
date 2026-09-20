@@ -43,6 +43,23 @@ data class NuevoMantenimientoPayload(
     val taller: String
 )
 
+/**
+ * Lo que el encargado puede corregir de un mantenimiento ya registrado
+ * (política `mantenimientos_update`). No incluye el vehículo ni quién lo
+ * registró: eso no se corrige, se borra el registro y se hace de nuevo.
+ */
+@Serializable
+data class EditarMantenimientoPayload(
+    val tipo: TipoMantenimiento,
+    val categoria: String,
+    val fecha: String,
+    val km: Double,
+    val responsable: String?,
+    val descripcion: String?,
+    val costo: Double,
+    val taller: String
+)
+
 /** Fila de `mantenimiento_fotos` leída de la base. */
 @Serializable
 data class FotoMantenimiento(
