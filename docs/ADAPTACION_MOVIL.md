@@ -145,7 +145,15 @@ dibuja con la barra inferior. El historial se consulta en Vehículo → Historia
 Un conductor tiene **un solo vehículo** asignado (decidido el 17/09/2026); la
 función `reasignar_conductor` lo garantiza.
 
-**Mecánico** (sin cambios): Inicio · Mantenimiento · Notificaciones · Perfil
+**Mecánico**: Inicio · Mantenimiento · Notificaciones · Perfil
+
+- **Inicio** es la lista de los vehículos que tiene **a cargo**: la misma
+  `FlotillaScreen` del encargado, con otro título, otro mensaje de lista vacía
+  y sin el botón de registrar vehículo. Tocar uno abre su detalle.
+- **Mantenimiento** es el formulario de registro. Como puede tener varios
+  vehículos, el formulario empieza con un selector "Vehículo"; si solo tiene
+  uno, se elige solo y el selector no aparece.
+- **Alertas** mezcla lo calculado sobre sus vehículos con los avisos guardados.
 
 **Encargado** (antes 6 pestañas, ahora 5):
 
@@ -223,9 +231,37 @@ Así se pasa de 6 a 5 pestañas sin perder ninguna función.
 - La base de datos bloquea a las cuentas no activas. Aun así, Supabase Auth les deja iniciar sesión, así que después del login la app revisa `usuarios.estado` y, si no es `activo`, muestra el motivo y cierra la sesión.
 - Un encargado no puede cambiar el estado de su propia cuenta.
 
-### Kilometraje: quién lo registra (decidido el 17/09/2026)
+### Rol mecánico (decidido el 20/09/2026)
 
-- Lo registran el **conductor asignado** y el **encargado** (sobre cualquier vehículo), no el mecánico.
+El enunciado del curso lo resume así: "el mecánico puede registrar
+mantenimientos y debe recibir notificaciones acerca de los carros asignados a
+él". De ahí salieron estas reglas (migración `202609201200_mecanico.sql`):
+
+- Un vehículo tiene **un** mecánico responsable (`vehiculos.mecanico_id`); un
+  mecánico puede tener **varios** vehículos.
+- El mecánico **solo ve, registra y recibe alertas de sus vehículos**. Antes
+  veía toda la flotilla: las políticas de `vehiculos`, `mantenimientos`,
+  `kilometraje` y del bucket dejaron de preguntar por el rol y preguntan por
+  la pertenencia (`conductor_id` o `mecanico_id`).
+- Lo asignan el **encargado**, desde el formulario del vehículo, y el
+  **conductor del vehículo**, desde el botón "Asignar mecánico" de la pestaña
+  Información del detalle. Como `vehiculos_update` es solo del encargado, el
+  conductor pasa por la función `asignar_mecanico`, que valida quién es.
+- El selector de mecánicos sale de `mecanicos_disponibles()`, que devuelve id
+  y nombre de los mecánicos activos. Ni el conductor ni el mecánico pueden
+  leer la tabla `usuarios` completa.
+- El mecánico **sí registra kilometraje** de sus vehículos: sin eso no podría
+  registrar un servicio con más kilómetros que la última lectura guardada.
+- Avisos automáticos: al quedar (o dejar de estar) a cargo de un vehículo, y
+  cada vez que se registra un mantenimiento en uno de sus vehículos. La
+  confirmación de mantenimiento ahora le llega a quien lo registró, al
+  conductor y al mecánico, sin repetirse.
+- Al registrar, el formulario propone su nombre en "Responsable", que es lo
+  que la rúbrica llama "taller o mecánico responsable".
+
+### Kilometraje: quién lo registra (decidido el 17/09/2026, ampliado el 20/09/2026)
+
+- Lo registran el **conductor asignado**, el **encargado** (sobre cualquier vehículo) y el **mecánico** sobre los vehículos que tiene a cargo.
 - Se le abrió al encargado porque un vehículo sin conductor no podía actualizar nunca su kilometraje, y porque si el conductor lo olvida nadie más podía hacerlo.
 - La base sigue exigiendo que cada lectura sea mayor a la anterior, y guarda quién la registró.
 
@@ -250,10 +286,13 @@ Así se pasa de 6 a 5 pestañas sin perder ninguna función.
 | Usuarios | `ui/usuarios/UsuariosScreen.kt` | pestaña `usuarios` |
 | Estado de la cuenta | `ui/usuarios/EstadoCuentaScreen.kt` | `estado-cuenta/{id}` |
 | Registrar administrador | `ui/usuarios/RegistrarAdministradorScreen.kt` | `registrar-administrador` |
+| Asignar mecánico | `ui/vehiculo/AsignarMecanicoScreen.kt` | `asignar-mecanico/{id}` |
+| Inicio del mecánico | `ui/flotilla/FlotillaScreen.kt` con `puedeRegistrarVehiculo = false` | pestaña `inicio` |
 
 Decisiones tomadas al implementar:
 
-- **Detalle del vehículo**: se reutiliza la pantalla del conductor con sus 4 pestañas, en lugar de crear una de 2. El encargado ve además el conductor asignado y los botones "Reasignar conductor" y "Editar vehículo". No ve "Registrar kilometraje", porque solo lo puede hacer el conductor (RLS).
+- **Detalle del vehículo**: se reutiliza la pantalla del conductor con sus 4 pestañas, en lugar de crear una de 2. El encargado ve además el conductor asignado y los botones "Reasignar conductor" y "Editar vehículo". El mecánico responsable lo ven los tres roles; lo cambian el encargado y el conductor.
+- **Registrar / editar vehículo** incluye, desde el 20/09/2026, los selectores "Conductor asignado" y "Mecánico responsable" (la rúbrica pide el conductor en el registro). El conductor no viaja en el payload: se guarda con `reasignar_conductor` para conservar el historial y las alertas.
 - **Estado de cada vehículo** en Flotilla: se toma el peor entre el estado del mantenimiento y el de los documentos. Un documento vencido cuenta como "Atrasado".
 - **KPI** "Mant. pendientes": cuenta los vehículos con mantenimiento próximo o atrasado.
 - **Reglas de las alertas** (`domain/AlertasFlotilla.kt`):
@@ -276,7 +315,7 @@ Decisiones tomadas al implementar:
   Mezcla dos fuentes: las alertas calculadas de su vehículo (documentos y mantenimientos, mismas reglas y textos que el panel del encargado) y los avisos guardados en la tabla `alertas` (gerencia, reasignaciones y mantenimientos registrados), que llevan la fecha en que llegaron. Tocar una alerta abre la pestaña del vehículo que corresponde.
 - **Registro (`1:370`)**: el selector de rol solo ofrece Conductor y Mecánico.
 - **RegistroMantenimiento (`49:161`)**: se agrega el campo obligatorio **"Kilometraje del servicio"**, que no está en el Figma y se precarga con el kilometraje actual del vehículo. La base lo exige (`mantenimientos.km`) y hace falta para estimar el próximo mantenimiento (decidido el 17/09/2026). Las categorías se leen de `frecuencias_mantenimiento` según el tipo de vehículo.
-  - Lo pueden registrar el **encargado** (sobre cualquier vehículo, decidido el 17/09/2026) y el conductor (sobre el suyo). La pantalla es la misma; por ahora solo está conectada para el encargado, desde la pestaña Historial del detalle.
+  - Lo pueden registrar el **encargado** (sobre cualquier vehículo, decidido el 17/09/2026), el **conductor** (sobre el suyo) y el **mecánico** (sobre los que tiene a cargo). La pantalla es la misma: pestaña para el conductor y el mecánico, y botón de la pestaña Historial del detalle para el encargado.
   - Campos además del Figma: **Taller** (obligatorio, es el "lugar") y **Descripción** (opcional). El **costo** es obligatorio, pero puede ser 0.
   - El kilometraje del servicio no puede ser mayor a la última lectura del vehículo, porque el odómetro solo sube. Si lo es, la pantalla ofrece registrar primero la lectura y al volver acepta el servicio.
   - Debajo se muestra el **próximo servicio estimado** de la categoría elegida.
@@ -294,8 +333,9 @@ Verificado contra la base real el 17/09/2026. Migraciones en `supabase/migration
 | `202609152200_mantenimientos.sql` | Columna `taller` y bucket de fotos | Aplicada (17/09/2026) |
 | `202609171900_encargado.sql` | Estado de cuenta, bloqueo de cuentas no activas, permiso de carga, alertas de gerencia, reasignaciones, registrar administrador | Aplicada (17/09/2026) |
 | `202609171910_frecuencias_iniciales.sql` | Catálogo de categorías y frecuencias (la tabla estaba vacía) | Aplicada (17/09/2026) |
-| `202609172100_encargado_registra_mantenimientos.sql` | El encargado también puede registrar mantenimientos | **Pendiente**: aplicar para que el encargado pueda guardar |
-| `202609172200_encargado_registra_kilometraje.sql` | El encargado también puede registrar kilometraje | **Pendiente**: aplicar para que el encargado pueda guardar |
+| `202609172100_encargado_registra_mantenimientos.sql` | El encargado también puede registrar mantenimientos | Aplicada (17/09/2026) |
+| `202609172200_encargado_registra_kilometraje.sql` | El encargado también puede registrar kilometraje | Aplicada (17/09/2026) |
+| `202609201200_mecanico.sql` | Mecánico responsable del vehículo, sus permisos, sus avisos y la función para asignarlo | **Pendiente**: sin ella el mecánico no ve nada y los selectores salen vacíos |
 
 El proyecto de Supabase **no pide confirmar el correo**, así que al registrarse
 queda la sesión abierta y la app guarda el perfil enseguida. Por eso se borró la
@@ -304,7 +344,7 @@ de git, commit `8a63686`): resolvía un problema que con esta configuración no
 existe, y aplicada rompía el registro. Si algún día se activa la confirmación de
 correo, hay que retomarla junto con el cambio en la app, no sola.
 
-Datos de ejemplo (no son migraciones) en `supabase/datos_ejemplo/`: `mantenimientos_ejemplo.sql` inserta 8 mantenimientos por vehículo activo, y `borrar_mantenimientos_ejemplo.sql` los quita.
+Datos de ejemplo (no son migraciones) en `supabase/datos_ejemplo/`: `mantenimientos_ejemplo.sql` inserta 8 mantenimientos por vehículo activo, `borrar_mantenimientos_ejemplo.sql` los quita y `asignar_mecanico_ejemplo.sql` reparte los vehículos sin mecánico entre los mecánicos activos.
 
 Decisiones de modelo:
 
@@ -313,4 +353,5 @@ Decisiones de modelo:
 - **Alertas**: las de documentos (vencido, por vencer) y las de mantenimiento (próximo, atrasado) se **calculan en la app** a partir de fechas, kilometraje y `frecuencias_mantenimiento`. En la tabla `alertas` quedan solo los avisos que ocurren una vez: reasignación, mantenimiento registrado y gerencia.
 - **Próximo mantenimiento**: último mantenimiento de la categoría + `km_frecuencia` o + `dias_frecuencia`, lo que ocurra primero.
 - **Reportes PDF**: se generan en el teléfono; no necesitan tablas. Se pueden compartir o guardar en la carpeta Descargas del propio teléfono (desde Android 10).
+- **Mecánico responsable**: `vehiculos.mecanico_id`. Un vehículo tiene uno; un mecánico, varios. Al desactivar la cuenta de un mecánico, sus vehículos quedan sin mecánico.
 - **Baja de vehículos**: `vehiculos.activo`. Un vehículo dado de baja sale de la flotilla activa, deja de generar alertas y se libera a su conductor con el mismo RPC de reasignación, para que quede el motivo en el historial. Se puede reactivar.
