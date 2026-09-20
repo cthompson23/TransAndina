@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +36,7 @@ import com.transandina.flotilla.ui.components.EstadoVacio
 import com.transandina.flotilla.ui.components.NivelEstado
 import com.transandina.flotilla.ui.components.TarjetaTransAndina
 import com.transandina.flotilla.ui.components.TransAndinaTopBar
+import com.transandina.flotilla.ui.flotilla.FlotillaScreen
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
 import com.transandina.flotilla.ui.theme.TransAndinaTheme
 
@@ -46,7 +46,23 @@ import com.transandina.flotilla.ui.theme.TransAndinaTheme
  * a la app, así que despachamos aquí en vez de tener 3 rutas separadas.
  */
 @Composable
-fun HomeScreen(rol: RolUsuario) {
+fun HomeScreen(
+    rol: RolUsuario,
+    onAbrirVehiculo: (vehiculoId: String) -> Unit = {}
+) {
+    // El mecánico entra directo a los vehículos que tiene a cargo. Esa
+    // pantalla trae su propia barra superior, así que no pasa por el Column
+    // de abajo.
+    if (rol == RolUsuario.mecanico) {
+        FlotillaScreen(
+            titulo = stringResource(R.string.mecanico_inicio_titulo),
+            mensajeVacio = stringResource(R.string.mecanico_sin_vehiculos),
+            puedeRegistrarVehiculo = false,
+            onAbrirVehiculo = onAbrirVehiculo
+        )
+        return
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         // Encabezado fijo de marca, igual en todas las pestañas de Inicio
         // (Figma `1:1225`).
@@ -54,8 +70,8 @@ fun HomeScreen(rol: RolUsuario) {
         Box(modifier = Modifier.weight(1f)) {
             when (rol) {
                 RolUsuario.conductor -> HomeConductorContent()
-                RolUsuario.mecanico -> HomeMecanicoContent()
                 RolUsuario.encargado -> HomeEncargadoContent()
+                RolUsuario.mecanico -> Unit // Ya se resolvió arriba
             }
         }
     }
@@ -185,21 +201,6 @@ private fun estadoGeneralDocumentos(vehiculo: Vehiculo): EstadoDocumento {
 }
 
 /**
- * Placeholder: el mecánico no tiene "un" vehículo asignado, trabaja
- * sobre cualquiera de la flotilla. Cuando construyamos el módulo de
- * mantenimiento, aquí va la lista de vehículos para elegir sobre cuál
- * registrar un servicio.
- */
-@Composable
-private fun HomeMecanicoContent() {
-    PlaceholderContent(
-        icono = Icons.Filled.Build,
-        titulo = stringResource(R.string.inicio_mecanico_titulo),
-        mensaje = stringResource(R.string.inicio_mecanico_mensaje)
-    )
-}
-
-/**
  * Placeholder: panel general del encargado de flota (semáforo de todos
  * los vehículos, según el módulo de gestión de flotilla del enunciado).
  */
@@ -311,13 +312,3 @@ private fun HomeErrorPreview() {
     }
 }
 
-@Preview(name = "Inicio mecánico", showBackground = true, heightDp = 600)
-@Composable
-private fun HomeMecanicoPreview() {
-    TransAndinaFlotillaTheme {
-        Column(modifier = Modifier.fillMaxSize()) {
-            TransAndinaTopBar(titulo = stringResource(R.string.marca))
-            HomeMecanicoContent()
-        }
-    }
-}

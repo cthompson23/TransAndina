@@ -148,7 +148,7 @@ private fun ContenidoNotificaciones(
                                 nivel = NivelEstado.INFO,
                                 fecha = formatearFechaIso(aviso.creadaEn.take(10)),
                                 onClick = aviso.vehiculoId
-                                    ?.takeIf { it == uiState.vehiculo?.id }
+                                    ?.takeIf { uiState.puedeAbrir(it) }
                                     ?.let { id -> { onAbrirVehiculo(id, PestanaVehiculo.INFORMACION) } }
                             )
                         }
@@ -197,7 +197,7 @@ private fun NotificacionesPreview() {
     TransAndinaFlotillaTheme {
         ContenidoNotificaciones(
             uiState = NotificacionesUiState(
-                vehiculo = vehiculoDeMuestra,
+                vehiculos = listOf(vehiculoDeMuestra),
                 calculadas = listOf(
                     AlertaFlotilla(
                         NivelAlerta.CRITICA,
@@ -235,7 +235,7 @@ private fun NotificacionesPreview() {
 private fun NotificacionesVaciasPreview() {
     TransAndinaFlotillaTheme {
         ContenidoNotificaciones(
-            uiState = NotificacionesUiState(vehiculo = vehiculoDeMuestra),
+            uiState = NotificacionesUiState(vehiculos = listOf(vehiculoDeMuestra)),
             onRecargar = {},
             onAbrirVehiculo = { _, _ -> }
         )

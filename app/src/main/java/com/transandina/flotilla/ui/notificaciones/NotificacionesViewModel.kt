@@ -18,7 +18,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class NotificacionesUiState(
-    val vehiculo: Vehiculo? = null,
+    /** Vehículo asignado (conductor) o vehículos a cargo (mecánico). */
+    val vehiculos: List<Vehiculo> = emptyList(),
     /** Documentos y mantenimientos: se calculan, no están guardados. */
     val calculadas: List<AlertaFlotilla> = emptyList(),
     /** Avisos de la tabla `alertas`: gerencia, reasignaciones y confirmaciones. */
@@ -27,12 +28,18 @@ data class NotificacionesUiState(
     val error: String? = null
 ) {
     val vacio: Boolean get() = calculadas.isEmpty() && guardadas.isEmpty()
+
+    /** Para saber si un aviso guardado lleva a un vehículo que esta persona puede abrir. */
+    fun puedeAbrir(vehiculoId: String?): Boolean = vehiculos.any { it.id == vehiculoId }
 }
 
 /**
- * "Mis alertas" del conductor (Figma `28:312`). Mezcla dos fuentes: lo que se
- * calcula sobre su vehículo (documentos y mantenimientos) y los avisos que sí
- * están guardados en `alertas` (docs/ADAPTACION_MOVIL.md §8).
+ * "Mis alertas" del conductor y del mecánico (Figma `28:312`). Mezcla dos
+ * fuentes: lo que se calcula sobre sus vehículos (documentos y
+ * mantenimientos) y los avisos guardados en `alertas`
+ * (docs/ADAPTACION_MOVIL.md §8). El conductor tiene un vehículo asignado y
+ * el mecánico los que tiene a cargo; las políticas RLS ya devuelven solo
+ * esos, así que la pantalla no necesita saber el rol.
  */
 class NotificacionesViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
@@ -50,20 +57,27 @@ class NotificacionesViewModel(
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
                 coroutineScope {
-                    val vehiculo = async { vehiculoRepository.obtenerVehiculoAsignado(usuarioId) }
+                    val asignado = async {
+                        runCatching { vehiculoRepository.obtenerVehiculoAsignado(usuarioId) }.getOrNull()
+                    }
+                    val aCargo = async {
+                        runCatching { vehiculoRepository.obtenerVehiculosDeMecanico(usuarioId) }
+                            .getOrDefault(emptyList())
+                    }
                     val guardadas = async { alertaRepository.obtenerMisAlertas(usuarioId) }
                     val frecuencias = async { mantenimientoRepository.obtenerFrecuencias() }
 
-                    val asignado = vehiculo.await()
-                    val mantenimientos = asignado
-                        ?.let { mantenimientoRepository.obtenerPorVehiculo(it.id) }
-                        .orEmpty()
+                    val mios = (listOfNotNull(asignado.await()) + aCargo.await())
+                        .distinctBy { v -> v.id }
+                    val mantenimientos = mios.flatMap { v ->
+                        mantenimientoRepository.obtenerPorVehiculo(v.id)
+                    }
 
                     _uiState.update {
                         it.copy(
-                            vehiculo = asignado,
+                            vehiculos = mios,
                             calculadas = calcularAlertasFlotilla(
-                                vehiculos = listOfNotNull(asignado),
+                                vehiculos = mios,
                                 mantenimientos = mantenimientos,
                                 frecuencias = frecuencias.await(),
                                 // Las reasignaciones le llegan como aviso guardado.

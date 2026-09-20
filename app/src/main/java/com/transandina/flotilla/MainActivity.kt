@@ -52,6 +52,7 @@ import com.transandina.flotilla.ui.kilometraje.KilometrajeScreen
 import com.transandina.flotilla.ui.usuarios.EstadoCuentaScreen
 import com.transandina.flotilla.ui.usuarios.RegistrarAdministradorScreen
 import com.transandina.flotilla.ui.usuarios.UsuariosScreen
+import com.transandina.flotilla.ui.vehiculo.AsignarMecanicoScreen
 import com.transandina.flotilla.ui.vehiculo.PestanaVehiculo
 import com.transandina.flotilla.ui.vehiculo.VehiculoDetalleScreen
 import com.transandina.flotilla.ui.vehiculo.VehiculoHubScreen
@@ -69,6 +70,7 @@ private const val RUTA_REGISTRAR_KILOMETRAJE = "registrar-kilometraje/{$ARG_VEHI
 // Rutas del encargado que no son pestañas (docs/ADAPTACION_MOVIL.md §5).
 private const val ARG_USUARIO_ID = "usuarioId"
 private const val RUTA_REASIGNAR = "reasignar/{$ARG_VEHICULO_ID}"
+private const val RUTA_ASIGNAR_MECANICO = "asignar-mecanico/{$ARG_VEHICULO_ID}"
 private const val RUTA_REGISTRAR_MANTENIMIENTO = "registrar-mantenimiento/{$ARG_VEHICULO_ID}"
 private const val RUTA_VEHICULO_NUEVO = "vehiculo-nuevo"
 private const val RUTA_VEHICULO_EDITAR = "vehiculo-editar/{$ARG_VEHICULO_ID}"
@@ -89,6 +91,8 @@ private fun rutaRegistrarKilometraje(vehiculoId: String) =
     "registrar-kilometraje/$vehiculoId"
 
 private fun rutaReasignar(vehiculoId: String) = "reasignar/$vehiculoId"
+
+private fun rutaAsignarMecanico(vehiculoId: String) = "asignar-mecanico/$vehiculoId"
 
 private fun rutaRegistrarMantenimiento(vehiculoId: String) = "registrar-mantenimiento/$vehiculoId"
 
@@ -263,7 +267,17 @@ private fun AppNavigation(
                 )
             }
             composable(BottomNavItem.Inicio.ruta) {
-                rolActual?.let { HomeScreen(rol = it) }
+                rolActual?.let { rol ->
+                    HomeScreen(
+                        rol = rol,
+                        // Inicio del mecánico: sus vehículos a cargo.
+                        onAbrirVehiculo = { id ->
+                            navController.navigate(
+                                rutaVehiculoDetalle(id, PestanaVehiculo.INFORMACION)
+                            )
+                        }
+                    )
+                }
             }
             composable(BottomNavItem.Vehiculo.ruta) {
                 VehiculoHubScreen(
@@ -291,8 +305,13 @@ private fun AppNavigation(
                     pestanaInicial = pestana,
                     tokenRecarga = tokenRecarga,
                     esEncargado = rolActual == RolUsuario.encargado,
-                    // El mecánico no registra kilometraje (migración 202609172200).
-                    puedeRegistrarKilometraje = rolActual != RolUsuario.mecanico,
+                    // Los tres roles pueden registrar kilometraje y
+                    // mantenimientos de los vehículos que ya están viendo; el
+                    // resto lo filtran las políticas RLS.
+                    puedeRegistrarKilometraje = true,
+                    puedeRegistrarMantenimiento = true,
+                    // El mecánico no se cambia a sí mismo (función asignar_mecanico).
+                    puedeAsignarMecanico = rolActual != RolUsuario.mecanico,
                     onAtras = { navController.popBackStack() },
                     onRegistrarKilometraje = { id ->
                         navController.navigate(rutaRegistrarKilometraje(id))
@@ -301,6 +320,7 @@ private fun AppNavigation(
                         navController.navigate(rutaRegistrarMantenimiento(id))
                     },
                     onReasignarConductor = { id -> navController.navigate(rutaReasignar(id)) },
+                    onAsignarMecanico = { id -> navController.navigate(rutaAsignarMecanico(id)) },
                     onEditarVehiculo = { id -> navController.navigate(rutaVehiculoEditar(id)) }
                 )
             }
@@ -311,8 +331,10 @@ private fun AppNavigation(
                     onRegistroExitoso = { navController.volverYRecargar() }
                 )
             }
-            // La pestaña Mantenimiento del conductor es el formulario sobre su
-            // vehículo asignado (Figma `49:161`, con la barra inferior visible).
+            // La pestaña Mantenimiento es el formulario sobre los vehículos
+            // propios (Figma `49:161`, con la barra inferior visible): el
+            // asignado, para el conductor, y los que tiene a cargo, para el
+            // mecánico, que elige cuál en el formulario.
             composable(BottomNavItem.Mantenimiento.ruta) { entrada ->
                 val tokenRecarga by entrada.savedStateHandle
                     .getStateFlow(CLAVE_RECARGAR, 0)
@@ -321,6 +343,7 @@ private fun AppNavigation(
                 RegistrarMantenimientoScreen(
                     tokenRecarga = tokenRecarga,
                     enPestana = true,
+                    esMecanico = rolActual == RolUsuario.mecanico,
                     onRegistrarKilometraje = { id ->
                         navController.navigate(rutaRegistrarKilometraje(id))
                     }
@@ -373,6 +396,13 @@ private fun AppNavigation(
                     vehiculoId = entrada.arguments?.getString(ARG_VEHICULO_ID).orEmpty(),
                     onAtras = { navController.popBackStack() },
                     onReasignado = { navController.volverYRecargar() }
+                )
+            }
+            composable(RUTA_ASIGNAR_MECANICO) { entrada ->
+                AsignarMecanicoScreen(
+                    vehiculoId = entrada.arguments?.getString(ARG_VEHICULO_ID).orEmpty(),
+                    onAtras = { navController.popBackStack() },
+                    onGuardado = { navController.volverYRecargar() }
                 )
             }
             composable(RUTA_REGISTRAR_MANTENIMIENTO) { entrada ->

@@ -24,6 +24,8 @@ data class VehiculoDetalleUiState(
     val conductor: Usuario? = null,
     val historialKilometraje: List<KilometrajeHistorico> = emptyList(),
     val mantenimientos: List<Mantenimiento> = emptyList(),
+    /** Nombre del mecánico responsable, si el vehículo tiene uno asignado. */
+    val nombreMecanico: String? = null,
     /** URLs firmadas de las fotos de evidencia, por id de mantenimiento. */
     val fotosPorMantenimiento: Map<String, List<String>> = emptyMap(),
     val proximosMantenimientos: List<ProximoMantenimiento> = emptyList(),
@@ -77,6 +79,15 @@ class VehiculoDetalleViewModel(
                             runCatching { usuarioRepository.obtenerPerfil(id) }.getOrNull()
                         }
                     }
+                    // El nombre del mecánico sí lo puede ver cualquiera: viene
+                    // de mecanicos_disponibles(), no de la tabla `usuarios`.
+                    val mecanicos = async {
+                        if (vehiculo.mecanicoId == null) {
+                            emptyList()
+                        } else {
+                            runCatching { vehiculoRepository.obtenerMecanicos() }.getOrDefault(emptyList())
+                        }
+                    }
 
                     // Las URLs de las fotos se firman aparte, porque dependen
                     // de los mantenimientos que hayan vuelto.
@@ -88,6 +99,9 @@ class VehiculoDetalleViewModel(
                         it.copy(
                             vehiculo = vehiculo,
                             conductor = conductor.await(),
+                            nombreMecanico = mecanicos.await()
+                                .find { m -> m.id == vehiculo.mecanicoId }
+                                ?.nombreCompleto,
                             historialKilometraje = historial.await(),
                             mantenimientos = mantenimientos.await(),
                             fotosPorMantenimiento = fotos,

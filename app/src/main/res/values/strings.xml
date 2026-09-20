@@ -55,8 +55,6 @@
     <string name="inicio_mi_vehiculo">Mi vehículo</string>
     <string name="inicio_sin_vehiculo">No tienes un vehículo asignado todavía</string>
     <string name="inicio_ver_documentos">Ve a la pestaña Vehículo para ver el detalle de tus documentos.</string>
-    <string name="inicio_mecanico_titulo">Vehículos de la flotilla</string>
-    <string name="inicio_mecanico_mensaje">Próximamente: listado de vehículos para registrar un mantenimiento sobre cualquiera de ellos.</string>
     <string name="inicio_encargado_titulo">Panel de flotilla</string>
     <string name="inicio_encargado_mensaje">Próximamente: estado general de todos los vehículos con indicadores de semáforo.</string>
 
@@ -383,6 +381,23 @@
     <string name="nav_alertas">Alertas de la flotilla</string>
     <string name="nav_reportes">Reportes</string>
     <string name="nav_usuarios">Usuarios</string>
+
+    <!-- Rol mecánico y asignación de responsables (sesión del 20/09/2026) -->
+    <string name="sin_mecanico">Sin mecánico</string>
+    <string name="mecanico_inicio_titulo">Vehículos a mi cargo</string>
+    <string name="mecanico_sin_vehiculos">Todavía no tienes vehículos a cargo. El encargado de flota o el conductor del vehículo te asignan como responsable.</string>
+    <string name="mecanico_sin_vehiculos_mantenimiento">No tienes vehículos a cargo, así que no hay sobre cuál registrar un mantenimiento.</string>
+    <string name="detalle_mecanico_asignado">Mecánico responsable</string>
+    <string name="detalle_asignar_mecanico">Asignar mecánico</string>
+    <string name="detalle_cambiar_mecanico">Cambiar mecánico</string>
+    <string name="asignar_mecanico_titulo">Mecánico responsable</string>
+    <string name="asignar_mecanico_ayuda">El mecánico que elijas ve este vehículo, puede registrarle mantenimientos y recibe sus alertas.</string>
+    <string name="asignar_mecanico_vacio">No hay mecánicos activos registrados.</string>
+    <string name="asignar_mecanico_actual">Ahora mismo: %1$s</string>
+    <string name="vehiculo_form_asignacion">Asignación</string>
+    <string name="vehiculo_form_asignacion_ayuda">Opcional. Los dos se pueden cambiar después sin editar el vehículo.</string>
+    <string name="mant_vehiculo">Vehículo</string>
+    <string name="mant_vehiculo_marcador">Selecciona el vehículo</string>
 
     <!-- Accesibilidad -->
     <string name="mostrar_contrasena">Mostrar contraseña</string>

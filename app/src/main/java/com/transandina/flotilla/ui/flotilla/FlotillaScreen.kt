@@ -57,10 +57,17 @@ import com.transandina.flotilla.ui.theme.TransAndinaTheme
  * Estado de la flotilla del encargado (Figma `102:158`, adaptado a móvil):
  * KPIs compactos, buscador, chips de estado y la tabla convertida en tarjetas.
  * Tocar un vehículo abre su detalle.
+ *
+ * El mecánico usa esta misma pantalla como Inicio: las políticas RLS le
+ * devuelven solo los vehículos que tiene a cargo, así que basta con cambiar
+ * el título, el mensaje de lista vacía y esconder el botón de registrar.
  */
 @Composable
 fun FlotillaScreen(
     viewModel: FlotillaViewModel = viewModel(),
+    titulo: String = stringResource(R.string.flotilla_titulo),
+    mensajeVacio: String = stringResource(R.string.flotilla_vacia),
+    puedeRegistrarVehiculo: Boolean = true,
     onAbrirVehiculo: (vehiculoId: String) -> Unit = {},
     onRegistrarVehiculo: () -> Unit = {}
 ) {
@@ -74,6 +81,9 @@ fun FlotillaScreen(
 
     ContenidoFlotilla(
         uiState = uiState,
+        titulo = titulo,
+        mensajeVacio = mensajeVacio,
+        puedeRegistrarVehiculo = puedeRegistrarVehiculo,
         onRecargar = viewModel::cargar,
         onBusquedaCambia = viewModel::onBusquedaChange,
         onFiltroCambia = viewModel::onFiltroChange,
@@ -86,6 +96,9 @@ fun FlotillaScreen(
 @Composable
 private fun ContenidoFlotilla(
     uiState: FlotillaUiState,
+    titulo: String = stringResource(R.string.flotilla_titulo),
+    mensajeVacio: String = stringResource(R.string.flotilla_vacia),
+    puedeRegistrarVehiculo: Boolean = true,
     onRecargar: () -> Unit,
     onBusquedaCambia: (String) -> Unit,
     onFiltroCambia: (FiltroFlotilla) -> Unit,
@@ -98,7 +111,7 @@ private fun ContenidoFlotilla(
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            TransAndinaTopBar(titulo = stringResource(R.string.flotilla_titulo))
+            TransAndinaTopBar(titulo = titulo)
 
             PullToRefreshBox(
                 isRefreshing = uiState.cargando && uiState.resumenes.isNotEmpty(),
@@ -150,7 +163,7 @@ private fun ContenidoFlotilla(
                         visibles.isEmpty() -> item {
                             EstadoVacio(
                                 mensaje = if (uiState.resumenes.isEmpty()) {
-                                    stringResource(R.string.flotilla_vacia)
+                                    mensajeVacio
                                 } else {
                                     stringResource(R.string.flotilla_sin_coincidencias)
                                 }
@@ -171,14 +184,16 @@ private fun ContenidoFlotilla(
             }
         }
 
-        BotonFlotante(
-            texto = stringResource(R.string.flotilla_registrar_vehiculo),
-            icono = Icons.Filled.Add,
-            onClick = onRegistrarVehiculo,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        )
+        if (puedeRegistrarVehiculo) {
+            BotonFlotante(
+                texto = stringResource(R.string.flotilla_registrar_vehiculo),
+                icono = Icons.Filled.Add,
+                onClick = onRegistrarVehiculo,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            )
+        }
     }
 }
 

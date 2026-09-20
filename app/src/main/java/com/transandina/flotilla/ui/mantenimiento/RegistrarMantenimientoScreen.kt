@@ -81,11 +81,14 @@ import java.time.LocalDate
  * pide el kilometraje del servicio, el taller y una descripción
  * (docs/ADAPTACION_MOVIL.md §7), y muestra cuándo tocaría el siguiente.
  *
- * Sirve para los dos casos: el encargado entra desde el detalle de un vehículo
- * (con [vehiculoId] y flecha de atrás), y el conductor la ve como su pestaña
- * Mantenimiento, sobre su vehículo asignado ([enPestana]).
+ * Sirve para los tres roles: el encargado entra desde el detalle de un
+ * vehículo (con [vehiculoId] y flecha de atrás), el conductor la ve como su
+ * pestaña Mantenimiento sobre su vehículo asignado ([enPestana]) y el
+ * mecánico, también como pestaña, eligiendo entre los que tiene a cargo.
  *
- * @param vehiculoId null = el vehículo asignado a quien tiene la sesión.
+ * @param vehiculoId null = los vehículos propios de quien tiene la sesión.
+ * @param esMecanico cambia el mensaje de "sin vehículos" y propone su nombre
+ *   como responsable del servicio.
  */
 @Composable
 fun RegistrarMantenimientoScreen(
@@ -93,6 +96,7 @@ fun RegistrarMantenimientoScreen(
     viewModel: RegistrarMantenimientoViewModel = viewModel(),
     tokenRecarga: Int = 0,
     enPestana: Boolean = false,
+    esMecanico: Boolean = false,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (vehiculoId: String) -> Unit = {},
     onGuardado: () -> Unit = {}
@@ -107,7 +111,7 @@ fun RegistrarMantenimientoScreen(
     val mensajeFotoFallida = stringResource(R.string.mant_foto_no_se_pudo_leer)
 
     LaunchedEffect(vehiculoId) {
-        viewModel.cargar(vehiculoId)
+        viewModel.cargar(vehiculoId, esMecanico)
     }
 
     // Al volver de registrar el kilometraje, se relee el vehículo para que la
@@ -163,7 +167,9 @@ fun RegistrarMantenimientoScreen(
         uiState = uiState,
         preparandoFotos = preparandoFotos,
         enPestana = enPestana,
+        esMecanico = esMecanico,
         acciones = AccionesMantenimiento(
+            onVehiculo = viewModel::onVehiculoChange,
             onTipo = viewModel::onTipoChange,
             onCategoria = viewModel::onCategoriaChange,
             onFecha = viewModel::onFechaChange,
@@ -186,6 +192,7 @@ fun RegistrarMantenimientoScreen(
 }
 
 private data class AccionesMantenimiento(
+    val onVehiculo: (String) -> Unit = {},
     val onTipo: (TipoMantenimiento) -> Unit = {},
     val onCategoria: (String) -> Unit = {},
     val onFecha: (LocalDate) -> Unit = {},
@@ -206,6 +213,7 @@ private fun ContenidoRegistrarMantenimiento(
     uiState: RegistrarMantenimientoUiState,
     preparandoFotos: Boolean,
     enPestana: Boolean = false,
+    esMecanico: Boolean = false,
     acciones: AccionesMantenimiento
 ) {
     val vehiculo = uiState.vehiculo
@@ -231,12 +239,20 @@ private fun ContenidoRegistrarMantenimiento(
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
 
+            // El mecánico con varios vehículos elige antes de ver el formulario.
+            vehiculo == null && uiState.vehiculosDisponibles.isNotEmpty() -> Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SelectorVehiculo(uiState = uiState, habilitado = true, onVehiculo = acciones.onVehiculo)
+            }
+
             vehiculo == null -> Box(modifier = Modifier.padding(16.dp)) {
                 EstadoVacio(
-                    mensaje = uiState.error ?: if (enPestana) {
-                        stringResource(R.string.vehiculo_sin_asignar)
-                    } else {
-                        stringResource(R.string.detalle_no_encontrado)
+                    mensaje = uiState.error ?: when {
+                        esMecanico -> stringResource(R.string.mecanico_sin_vehiculos_mantenimiento)
+                        enPestana -> stringResource(R.string.vehiculo_sin_asignar)
+                        else -> stringResource(R.string.detalle_no_encontrado)
                     }
                 )
             }
@@ -248,6 +264,14 @@ private fun ContenidoRegistrarMantenimiento(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                if (uiState.hayQueElegirVehiculo) {
+                    SelectorVehiculo(
+                        uiState = uiState,
+                        habilitado = editable,
+                        onVehiculo = acciones.onVehiculo
+                    )
+                }
+
                 val preventivo = etiquetaTipoMantenimiento(TipoMantenimiento.preventivo)
                 val correctivo = etiquetaTipoMantenimiento(TipoMantenimiento.correctivo)
 
@@ -411,6 +435,30 @@ private fun ContenidoRegistrarMantenimiento(
 }
 
 /** "Evidencia fotográfica" (Figma `67:133`): botón punteado y las fotos elegidas. */
+/** Lista de vehículos propios; solo aparece cuando hay más de uno. */
+@Composable
+private fun SelectorVehiculo(
+    uiState: RegistrarMantenimientoUiState,
+    habilitado: Boolean,
+    onVehiculo: (String) -> Unit
+) {
+    val etiquetas = remember(uiState.vehiculosDisponibles) {
+        uiState.vehiculosDisponibles.associate { v -> v.id to "${v.placa} · ${v.marca} ${v.modelo}" }
+    }
+
+    CampoSeleccion(
+        etiqueta = stringResource(R.string.mant_vehiculo),
+        seleccion = uiState.vehiculo?.let { etiquetas[it.id] },
+        opciones = etiquetas.values.toList(),
+        onSeleccionar = { elegida ->
+            etiquetas.entries.find { it.value == elegida }?.let { onVehiculo(it.key) }
+        },
+        marcadorDePosicion = stringResource(R.string.mant_vehiculo_marcador),
+        forma = FormaPildora,
+        habilitado = habilitado
+    )
+}
+
 @Composable
 private fun SeccionFotos(
     fotos: List<FotoAdjunta>,

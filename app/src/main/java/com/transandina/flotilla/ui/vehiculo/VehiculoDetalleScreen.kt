@@ -78,8 +78,11 @@ enum class PestanaVehiculo { INFORMACION, HISTORIAL, KILOMETRAJE, DOCUMENTOS }
  * @param esEncargado muestra el conductor asignado y las acciones del
  *   encargado: reasignar, editar datos y documentos, y registrar
  *   mantenimientos (Figma `102:178`).
- * @param puedeRegistrarKilometraje lo pueden hacer el conductor asignado y el
- *   encargado (migración 202609172200), no el mecánico.
+ * @param puedeRegistrarKilometraje lo pueden hacer el conductor asignado, el
+ *   encargado y el mecánico responsable (migraciones 202609172200 y
+ *   202609201200).
+ * @param puedeAsignarMecanico solo el encargado y el conductor del vehículo
+ *   (función `asignar_mecanico`).
  */
 @Composable
 fun VehiculoDetalleScreen(
@@ -89,10 +92,13 @@ fun VehiculoDetalleScreen(
     viewModel: VehiculoDetalleViewModel = viewModel(),
     esEncargado: Boolean = false,
     puedeRegistrarKilometraje: Boolean = true,
+    puedeRegistrarMantenimiento: Boolean = true,
+    puedeAsignarMecanico: Boolean = false,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (vehiculoId: String) -> Unit = {},
     onRegistrarMantenimiento: (vehiculoId: String) -> Unit = {},
     onReasignarConductor: (vehiculoId: String) -> Unit = {},
+    onAsignarMecanico: (vehiculoId: String) -> Unit = {},
     onEditarVehiculo: (vehiculoId: String) -> Unit = {},
     tokenRecarga: Int = 0
 ) {
@@ -108,10 +114,13 @@ fun VehiculoDetalleScreen(
         modifier = modifier,
         esEncargado = esEncargado,
         puedeRegistrarKilometraje = puedeRegistrarKilometraje,
+        puedeRegistrarMantenimiento = puedeRegistrarMantenimiento,
+        puedeAsignarMecanico = puedeAsignarMecanico,
         onAtras = onAtras,
         onRegistrarKilometraje = onRegistrarKilometraje,
         onRegistrarMantenimiento = onRegistrarMantenimiento,
         onReasignarConductor = onReasignarConductor,
+        onAsignarMecanico = onAsignarMecanico,
         onEditarVehiculo = onEditarVehiculo
     )
 }
@@ -123,10 +132,13 @@ private fun ContenidoDetalle(
     modifier: Modifier = Modifier,
     esEncargado: Boolean = false,
     puedeRegistrarKilometraje: Boolean = true,
+    puedeRegistrarMantenimiento: Boolean = true,
+    puedeAsignarMecanico: Boolean = false,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (String) -> Unit = {},
     onRegistrarMantenimiento: (String) -> Unit = {},
     onReasignarConductor: (String) -> Unit = {},
+    onAsignarMecanico: (String) -> Unit = {},
     onEditarVehiculo: (String) -> Unit = {}
 ) {
     var pestana by rememberSaveable { mutableStateOf(pestanaInicial) }
@@ -191,17 +203,18 @@ private fun ContenidoDetalle(
                         PestanaVehiculo.INFORMACION -> PestanaInformacion(
                             vehiculo = vehiculo,
                             conductor = uiState.conductor,
+                            nombreMecanico = uiState.nombreMecanico,
                             esEncargado = esEncargado,
+                            puedeAsignarMecanico = puedeAsignarMecanico,
                             onReasignarConductor = { onReasignarConductor(vehiculo.id) },
+                            onAsignarMecanico = { onAsignarMecanico(vehiculo.id) },
                             onEditarVehiculo = { onEditarVehiculo(vehiculo.id) }
                         )
 
-                        // Por ahora solo el encargado registra desde aquí; el
-                        // formulario del conductor se conecta más adelante.
                         PestanaVehiculo.HISTORIAL -> PestanaHistorial(
                             mantenimientos = uiState.mantenimientos,
                             fotosPorMantenimiento = uiState.fotosPorMantenimiento,
-                            puedeRegistrar = esEncargado,
+                            puedeRegistrar = puedeRegistrarMantenimiento,
                             onRegistrar = { onRegistrarMantenimiento(vehiculo.id) },
                             onVerFoto = { fotoAmpliada = it }
                         )
@@ -232,14 +245,18 @@ private fun ContenidoDetalle(
 
 /**
  * Datos de solo lectura (Figma `28:418`). El encargado ve además el conductor
- * asignado, el kilometraje y sus acciones (Figma `102:178`).
+ * asignado, el kilometraje y sus acciones (Figma `102:178`). El mecánico
+ * responsable lo ven todos, y lo cambian el encargado y el conductor.
  */
 @Composable
 private fun ColumnScope.PestanaInformacion(
     vehiculo: Vehiculo,
     conductor: Usuario?,
+    nombreMecanico: String?,
     esEncargado: Boolean,
+    puedeAsignarMecanico: Boolean,
     onReasignarConductor: () -> Unit,
+    onAsignarMecanico: () -> Unit,
     onEditarVehiculo: () -> Unit
 ) {
     TarjetaTransAndina {
@@ -273,26 +290,49 @@ private fun ColumnScope.PestanaInformacion(
         }
     }
 
-    if (!esEncargado) return
-
     Spacer(modifier = Modifier.height(12.dp))
 
     TarjetaTransAndina {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (esEncargado) {
+                DatoEtiquetado(
+                    etiqueta = stringResource(R.string.detalle_conductor_asignado),
+                    valor = when {
+                        conductor != null -> conductor.nombreCompleto
+                        vehiculo.conductorId != null -> stringResource(R.string.detalle_conductor_no_disponible)
+                        else -> stringResource(R.string.sin_conductor)
+                    }
+                )
+                DatoEtiquetado(
+                    etiqueta = stringResource(R.string.kilometraje_actual),
+                    valor = formatearKilometrosConUnidad(vehiculo.kmActual)
+                )
+            }
             DatoEtiquetado(
-                etiqueta = stringResource(R.string.detalle_conductor_asignado),
+                etiqueta = stringResource(R.string.detalle_mecanico_asignado),
                 valor = when {
-                    conductor != null -> conductor.nombreCompleto
-                    vehiculo.conductorId != null -> stringResource(R.string.detalle_conductor_no_disponible)
-                    else -> stringResource(R.string.sin_conductor)
+                    nombreMecanico != null -> nombreMecanico
+                    vehiculo.mecanicoId != null -> stringResource(R.string.detalle_conductor_no_disponible)
+                    else -> stringResource(R.string.sin_mecanico)
                 }
-            )
-            DatoEtiquetado(
-                etiqueta = stringResource(R.string.kilometraje_actual),
-                valor = formatearKilometrosConUnidad(vehiculo.kmActual)
             )
         }
     }
+
+    if (puedeAsignarMecanico) {
+        Spacer(modifier = Modifier.height(16.dp))
+        BotonSecundario(
+            texto = if (vehiculo.mecanicoId == null) {
+                stringResource(R.string.detalle_asignar_mecanico)
+            } else {
+                stringResource(R.string.detalle_cambiar_mecanico)
+            },
+            onClick = onAsignarMecanico,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+
+    if (!esEncargado) return
 
     Spacer(modifier = Modifier.height(16.dp))
 
