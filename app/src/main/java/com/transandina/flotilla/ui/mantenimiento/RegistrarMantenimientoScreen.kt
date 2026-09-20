@@ -63,6 +63,7 @@ import com.transandina.flotilla.ui.components.BotonSecundario
 import com.transandina.flotilla.ui.components.CampoFecha
 import com.transandina.flotilla.ui.components.CampoSeleccion
 import com.transandina.flotilla.ui.components.CampoTexto
+import com.transandina.flotilla.ui.components.DialogoConfirmacion
 import com.transandina.flotilla.ui.components.EstadoVacio
 import com.transandina.flotilla.ui.components.FilaBotonesFormulario
 import com.transandina.flotilla.ui.components.TarjetaTransAndina
@@ -89,6 +90,9 @@ import java.time.LocalDate
  * @param vehiculoId null = los vehículos propios de quien tiene la sesión.
  * @param esMecanico cambia el mensaje de "sin vehículos" y propone su nombre
  *   como responsable del servicio.
+ * @param mantenimientoId corrige un registro que ya existe, en vez de crear
+ *   uno nuevo. Solo el encargado (políticas `mantenimientos_update` y
+ *   `mantenimientos_delete`).
  */
 @Composable
 fun RegistrarMantenimientoScreen(
@@ -97,6 +101,7 @@ fun RegistrarMantenimientoScreen(
     tokenRecarga: Int = 0,
     enPestana: Boolean = false,
     esMecanico: Boolean = false,
+    mantenimientoId: String? = null,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (vehiculoId: String) -> Unit = {},
     onGuardado: () -> Unit = {}
@@ -110,14 +115,18 @@ fun RegistrarMantenimientoScreen(
     val mensajeFormato = stringResource(R.string.mant_foto_formato_invalido)
     val mensajeFotoFallida = stringResource(R.string.mant_foto_no_se_pudo_leer)
 
-    LaunchedEffect(vehiculoId) {
-        viewModel.cargar(vehiculoId, esMecanico)
+    LaunchedEffect(vehiculoId, mantenimientoId) {
+        viewModel.cargar(vehiculoId, esMecanico, mantenimientoId)
     }
 
     // Al volver de registrar el kilometraje, se relee el vehículo para que la
     // nueva lectura valga; lo escrito en el formulario se conserva.
     LaunchedEffect(tokenRecarga) {
         if (tokenRecarga > 0) viewModel.recargarVehiculo()
+    }
+
+    LaunchedEffect(uiState.eliminado) {
+        if (uiState.eliminado) onGuardado()
     }
 
     LaunchedEffect(uiState.guardado) {
@@ -186,6 +195,7 @@ fun RegistrarMantenimientoScreen(
             onQuitarFoto = viewModel::onFotoQuitada,
             onRegistrarKilometraje = { uiState.vehiculo?.let { onRegistrarKilometraje(it.id) } },
             onGuardar = viewModel::guardar,
+            onEliminar = viewModel::eliminar,
             onCancelar = { if (enPestana) viewModel.limpiarFormulario() else onAtras() }
         )
     )
@@ -205,6 +215,7 @@ private data class AccionesMantenimiento(
     val onQuitarFoto: (String) -> Unit = {},
     val onRegistrarKilometraje: () -> Unit = {},
     val onGuardar: () -> Unit = {},
+    val onEliminar: () -> Unit = {},
     val onCancelar: () -> Unit = {}
 )
 
@@ -217,7 +228,8 @@ private fun ContenidoRegistrarMantenimiento(
     acciones: AccionesMantenimiento
 ) {
     val vehiculo = uiState.vehiculo
-    val editable = !uiState.guardando
+    var confirmarEliminar by remember { mutableStateOf(false) }
+    val editable = !uiState.guardando && !uiState.eliminando
 
     Column(
         modifier = Modifier
@@ -225,7 +237,11 @@ private fun ContenidoRegistrarMantenimiento(
             .background(MaterialTheme.colorScheme.background)
     ) {
         TransAndinaTopBar(
-            titulo = stringResource(R.string.mant_titulo),
+            titulo = if (uiState.esEdicion) {
+                stringResource(R.string.mant_titulo_editar)
+            } else {
+                stringResource(R.string.mant_titulo)
+            },
             subtitulo = vehiculo?.let { "${it.placa} · ${it.marca} ${it.modelo}" },
             // En la pestaña del conductor no hay pantalla anterior.
             onAtras = if (enPestana) null else acciones.onCancelar
@@ -382,13 +398,21 @@ private fun ContenidoRegistrarMantenimiento(
                     lineas = 3
                 )
 
-                SeccionFotos(
-                    fotos = uiState.fotos,
-                    puedeAdjuntar = uiState.puedeAdjuntar && editable && !preparandoFotos,
-                    preparando = preparandoFotos,
-                    onAdjuntar = acciones.onAdjuntar,
-                    onQuitar = acciones.onQuitarFoto
-                )
+                if (uiState.esEdicion) {
+                    Text(
+                        text = stringResource(R.string.mant_editar_sin_fotos),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TransAndinaTheme.colores.textoSecundario
+                    )
+                } else {
+                    SeccionFotos(
+                        fotos = uiState.fotos,
+                        puedeAdjuntar = uiState.puedeAdjuntar && editable && !preparandoFotos,
+                        preparando = preparandoFotos,
+                        onAdjuntar = acciones.onAdjuntar,
+                        onQuitar = acciones.onQuitarFoto
+                    )
+                }
 
                 TarjetaEstimado(
                     categoria = uiState.categoria,
@@ -424,17 +448,44 @@ private fun ContenidoRegistrarMantenimiento(
                     } else {
                         stringResource(R.string.cancelar)
                     },
-                    accionHabilitada = !preparandoFotos,
+                    accionHabilitada = !preparandoFotos && !uiState.eliminando,
                     cargando = uiState.guardando
                 )
+
+                if (uiState.esEdicion) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    BotonSecundario(
+                        texto = stringResource(R.string.mant_eliminar),
+                        onClick = { confirmarEliminar = true },
+                        habilitado = !uiState.eliminando && !uiState.guardando,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
+
+    if (confirmarEliminar && vehiculo != null) {
+        DialogoConfirmacion(
+            titulo = stringResource(R.string.mant_eliminar_dialogo_titulo),
+            mensaje = stringResource(
+                R.string.mant_eliminar_dialogo,
+                uiState.categoria.orEmpty(),
+                formatearFecha(uiState.fecha)
+            ),
+            textoConfirmar = stringResource(R.string.eliminar),
+            destructiva = true,
+            onConfirmar = {
+                confirmarEliminar = false
+                acciones.onEliminar()
+            },
+            onCancelar = { confirmarEliminar = false }
+        )
+    }
 }
 
-/** "Evidencia fotográfica" (Figma `67:133`): botón punteado y las fotos elegidas. */
 /** Lista de vehículos propios; solo aparece cuando hay más de uno. */
 @Composable
 private fun SelectorVehiculo(
@@ -459,6 +510,7 @@ private fun SelectorVehiculo(
     )
 }
 
+/** "Evidencia fotográfica" (Figma `67:133`): botón punteado y las fotos elegidas. */
 @Composable
 private fun SeccionFotos(
     fotos: List<FotoAdjunta>,

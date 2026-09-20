@@ -42,6 +42,8 @@ fun etiquetaTipoMantenimiento(tipo: TipoMantenimiento): String = when (tipo) {
  * Un mantenimiento como tarjeta (Figma `51:125`, `102:178`, `102:218`):
  * categoría y costo arriba, tipo y taller, y abajo fecha, km y responsable.
  * Con [placa] se antepone la unidad, para los reportes de toda la flotilla.
+ * Con [onClick] la tarjeta se vuelve tocable; lo usa el encargado para
+ * corregir o eliminar el registro.
  */
 @Composable
 fun TarjetaMantenimiento(
@@ -49,9 +51,10 @@ fun TarjetaMantenimiento(
     modifier: Modifier = Modifier,
     placa: String? = null,
     fotos: List<String> = emptyList(),
-    onVerFoto: (String) -> Unit = {}
+    onVerFoto: (String) -> Unit = {},
+    onClick: (() -> Unit)? = null
 ) {
-    TarjetaTransAndina(modifier = modifier) {
+    TarjetaTransAndina(modifier = modifier, onClick = onClick) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top

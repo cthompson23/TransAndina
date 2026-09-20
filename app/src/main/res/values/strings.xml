@@ -6,6 +6,7 @@
     <string name="volver">Volver</string>
     <string name="cancelar">Cancelar</string>
     <string name="guardar">Guardar</string>
+    <string name="eliminar">Eliminar</string>
     <string name="correo_electronico">Correo electrónico</string>
     <string name="correo_marcador">ejemplo@correo.com</string>
     <string name="contrasena">Contraseña</string>
@@ -398,6 +399,18 @@
     <string name="vehiculo_form_asignacion_ayuda">Opcional. Los dos se pueden cambiar después sin editar el vehículo.</string>
     <string name="mant_vehiculo">Vehículo</string>
     <string name="mant_vehiculo_marcador">Selecciona el vehículo</string>
+
+    <!-- Editar / eliminar mantenimientos y filtros del historial (20/09/2026) -->
+    <string name="mant_titulo_editar">Editar mantenimiento</string>
+    <string name="mant_eliminar">Eliminar mantenimiento</string>
+    <string name="mant_eliminar_dialogo_titulo">¿Eliminar el mantenimiento?</string>
+    <string name="mant_eliminar_dialogo">Se borra el registro de %1$s del %2$s, con sus fotos. No se puede deshacer.</string>
+    <string name="mant_editar_sin_fotos">Las fotos no se cambian al corregir: solo las adjunta quien registró el servicio.</string>
+    <string name="historial_editar_ayuda">Toca un mantenimiento para corregirlo o eliminarlo.</string>
+    <string name="historial_desde">Desde</string>
+    <string name="historial_hasta">Hasta</string>
+    <string name="historial_limpiar_fechas">Limpiar fechas</string>
+    <string name="historial_sin_coincidencias">Ningún mantenimiento coincide con los filtros</string>
 
     <!-- Accesibilidad -->
     <string name="mostrar_contrasena">Mostrar contraseña</string>

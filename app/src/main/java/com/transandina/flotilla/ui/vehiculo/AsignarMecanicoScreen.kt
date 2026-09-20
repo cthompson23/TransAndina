@@ -20,7 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.transandina.flotilla.R
-import com.transandina.flotilla.data.model.MecanicoDisponible
+import com.transandina.flotilla.data.model.PersonaResumen
 import com.transandina.flotilla.ui.components.CampoSeleccion
 import com.transandina.flotilla.ui.components.EstadoVacio
 import com.transandina.flotilla.ui.components.FilaBotonesFormulario
@@ -153,8 +153,8 @@ private fun ContenidoAsignarMecanico(
 }
 
 private val mecanicosDeMuestra = listOf(
-    MecanicoDisponible(id = "m1", nombreCompleto = "Marco Ureña Rojas"),
-    MecanicoDisponible(id = "m2", nombreCompleto = "Sofía Calderón Mora")
+    PersonaResumen(id = "m1", nombreCompleto = "Marco Ureña Rojas"),
+    PersonaResumen(id = "m2", nombreCompleto = "Sofía Calderón Mora")
 )
 
 @Preview(name = "Asignar mecánico", showBackground = true, heightDp = 500)

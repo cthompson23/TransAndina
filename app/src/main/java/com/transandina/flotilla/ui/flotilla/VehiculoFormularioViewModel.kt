@@ -3,7 +3,7 @@ package com.transandina.flotilla.ui.flotilla
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.transandina.flotilla.data.model.EstadoCuenta
-import com.transandina.flotilla.data.model.MecanicoDisponible
+import com.transandina.flotilla.data.model.PersonaResumen
 import com.transandina.flotilla.data.model.ReasignarConductorParams
 import com.transandina.flotilla.data.model.RolUsuario
 import com.transandina.flotilla.data.model.TIPOS_VEHICULO
@@ -38,7 +38,7 @@ data class VehiculoFormularioUiState(
     /** Conductores activos que pueden tomar este vehículo. */
     val conductores: List<Usuario> = emptyList(),
     /** Mecánicos activos, de `mecanicos_disponibles()`. */
-    val mecanicos: List<MecanicoDisponible> = emptyList(),
+    val mecanicos: List<PersonaResumen> = emptyList(),
     val conductorId: String? = null,
     val mecanicoId: String? = null,
     /** El conductor que tenía al abrir: si cambia, se llama a la reasignación. */

@@ -44,12 +44,12 @@ data class VehiculoPayload(
 )
 
 /**
- * Mecánico que devuelve la función `mecanicos_disponibles()` (migración
- * 202609201200): solo id y nombre, porque el conductor y el mecánico no
- * pueden leer la tabla `usuarios` completa.
+ * Id y nombre de una persona, que es todo lo que devuelven las funciones
+ * `mecanicos_disponibles()` y `personas_de_mis_vehiculos()`. Existen porque
+ * ni el conductor ni el mecánico pueden leer la tabla `usuarios` completa.
  */
 @Serializable
-data class MecanicoDisponible(
+data class PersonaResumen(
     val id: String,
     @SerialName("nombre_completo") val nombreCompleto: String
 )

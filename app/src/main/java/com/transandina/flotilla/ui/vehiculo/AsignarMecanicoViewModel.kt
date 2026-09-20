@@ -2,7 +2,7 @@ package com.transandina.flotilla.ui.vehiculo
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.transandina.flotilla.data.model.MecanicoDisponible
+import com.transandina.flotilla.data.model.PersonaResumen
 import com.transandina.flotilla.data.model.Vehiculo
 import com.transandina.flotilla.data.repository.VehiculoRepository
 import kotlinx.coroutines.async
@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 data class AsignarMecanicoUiState(
     val vehiculo: Vehiculo? = null,
-    val mecanicos: List<MecanicoDisponible> = emptyList(),
+    val mecanicos: List<PersonaResumen> = emptyList(),
     /** Null = el vehículo queda sin mecánico responsable. */
     val seleccionadoId: String? = null,
     val cargando: Boolean = false,

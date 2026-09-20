@@ -3,6 +3,7 @@ package com.transandina.flotilla.ui.mantenimiento
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.transandina.flotilla.data.model.EditarMantenimientoPayload
 import com.transandina.flotilla.data.model.FrecuenciaMantenimiento
 import com.transandina.flotilla.data.model.NuevoMantenimientoPayload
 import com.transandina.flotilla.data.model.TipoMantenimiento
@@ -17,6 +18,7 @@ import com.transandina.flotilla.domain.estimarSiguienteServicio
 import com.transandina.flotilla.domain.formatearKilometrosConUnidad
 import com.transandina.flotilla.domain.interpretarKilometros
 import com.transandina.flotilla.domain.interpretarMonto
+import com.transandina.flotilla.domain.parsearFechaIso
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +43,8 @@ class FotoAdjunta(
 )
 
 data class RegistrarMantenimientoUiState(
+    /** Id del mantenimiento que se está corrigiendo; null al registrar uno nuevo. */
+    val mantenimientoId: String? = null,
     val vehiculo: Vehiculo? = null,
     /** Vehículos sobre los que esta persona puede registrar. El mecánico suele tener varios. */
     val vehiculosDisponibles: List<Vehiculo> = emptyList(),
@@ -58,9 +62,12 @@ data class RegistrarMantenimientoUiState(
     val guardando: Boolean = false,
     val error: String? = null,
     val guardado: Boolean = false,
+    val eliminando: Boolean = false,
+    val eliminado: Boolean = false,
     /** Cuántas fotos no se pudieron subir aunque el mantenimiento sí se guardó. */
     val fotosFallidas: Int = 0
 ) {
+    val esEdicion: Boolean get() = mantenimientoId != null
     /** Categorías del catálogo para el tipo de este vehículo, con "Otro" al final. */
     val categorias: List<String>
         get() = frecuencias
@@ -72,7 +79,7 @@ data class RegistrarMantenimientoUiState(
     val puedeAdjuntar: Boolean get() = fotos.size < MAXIMO_FOTOS
 
     /** Con más de uno hay que elegir sobre cuál se registra. */
-    val hayQueElegirVehiculo: Boolean get() = vehiculosDisponibles.size > 1
+    val hayQueElegirVehiculo: Boolean get() = !esEdicion && vehiculosDisponibles.size > 1
 
     /**
      * El servicio se hizo con más kilómetros de los que tiene registrados el
@@ -141,7 +148,11 @@ class RegistrarMantenimientoViewModel(
      * @param esMecanico rellena el responsable con su propio nombre, que es
      *   lo que la rúbrica llama "taller o mecánico responsable".
      */
-    fun cargar(vehiculoId: String?, esMecanico: Boolean = false) {
+    fun cargar(vehiculoId: String?, esMecanico: Boolean = false, mantenimientoId: String? = null) {
+        if (mantenimientoId != null) {
+            cargarParaEditar(mantenimientoId)
+            return
+        }
         val actual = _uiState.value
         val yaCargado = actual.vehiculo != null || actual.vehiculosDisponibles.isNotEmpty()
         if (yaCargado && (vehiculoId == null || actual.vehiculo?.id == vehiculoId)) return
@@ -200,6 +211,54 @@ class RegistrarMantenimientoViewModel(
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(cargando = false, error = "No se pudo cargar el vehículo") }
+            }
+        }
+    }
+
+    /**
+     * Trae un mantenimiento ya registrado para que el encargado lo corrija
+     * (política `mantenimientos_update`). Las fotos no se tocan al editar:
+     * `fotos_insert` solo deja adjuntar a quien registró el servicio.
+     */
+    private fun cargarParaEditar(mantenimientoId: String) {
+        if (_uiState.value.mantenimientoId == mantenimientoId) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(mantenimientoId = mantenimientoId, cargando = true, error = null) }
+            try {
+                val mantenimiento = mantenimientoRepository.obtenerPorId(mantenimientoId)
+                if (mantenimiento == null) {
+                    _uiState.update {
+                        it.copy(cargando = false, error = "No encontramos ese mantenimiento")
+                    }
+                    return@launch
+                }
+                coroutineScope {
+                    val vehiculo = async {
+                        vehiculoRepository.obtenerVehiculoPorId(mantenimiento.vehiculoId)
+                    }
+                    val frecuencias = async { mantenimientoRepository.obtenerFrecuencias() }
+                    val encontrado = vehiculo.await()
+                    _uiState.update {
+                        it.copy(
+                            vehiculo = encontrado,
+                            vehiculosDisponibles = listOfNotNull(encontrado),
+                            frecuencias = frecuencias.await(),
+                            tipo = mantenimiento.tipo,
+                            categoria = mantenimiento.categoria,
+                            fecha = parsearFechaIso(mantenimiento.fecha) ?: LocalDate.now(),
+                            km = mantenimiento.km.toLong().toString(),
+                            taller = mantenimiento.taller.orEmpty(),
+                            responsable = mantenimiento.responsable.orEmpty(),
+                            costo = mantenimiento.costo?.toLong()?.toString().orEmpty(),
+                            descripcion = mantenimiento.descripcion.orEmpty(),
+                            cargando = false
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(cargando = false, error = "No se pudo cargar el mantenimiento")
+                }
             }
         }
     }
@@ -281,6 +340,23 @@ class RegistrarMantenimientoViewModel(
             return
         }
 
+        if (s.esEdicion) {
+            actualizar(
+                mantenimientoId = s.mantenimientoId!!,
+                datos = EditarMantenimientoPayload(
+                    tipo = s.tipo!!,
+                    categoria = s.categoria!!,
+                    fecha = aFechaIso(s.fecha),
+                    km = km!!,
+                    responsable = s.responsable.trim().ifBlank { null },
+                    descripcion = s.descripcion.trim().ifBlank { null },
+                    costo = costo!!,
+                    taller = s.taller.trim()
+                )
+            )
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(guardando = true, error = null) }
             val registrado = try {
@@ -314,6 +390,32 @@ class RegistrarMantenimientoViewModel(
                 }
             }
             _uiState.update { it.copy(guardando = false, guardado = true, fotosFallidas = fallidas) }
+        }
+    }
+
+    private fun actualizar(mantenimientoId: String, datos: EditarMantenimientoPayload) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(guardando = true, error = null) }
+            try {
+                mantenimientoRepository.actualizar(mantenimientoId, datos)
+                _uiState.update { it.copy(guardando = false, guardado = true) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(guardando = false, error = mensajeDeError(e)) }
+            }
+        }
+    }
+
+    /** Borra el registro y sus fotos. La pantalla ya pidió confirmación. */
+    fun eliminar() {
+        val mantenimientoId = _uiState.value.mantenimientoId ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(eliminando = true, error = null) }
+            try {
+                mantenimientoRepository.eliminar(mantenimientoId)
+                _uiState.update { it.copy(eliminando = false, eliminado = true) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(eliminando = false, error = mensajeDeError(e)) }
+            }
         }
     }
 

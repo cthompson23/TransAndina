@@ -79,13 +79,15 @@ class VehiculoDetalleViewModel(
                             runCatching { usuarioRepository.obtenerPerfil(id) }.getOrNull()
                         }
                     }
-                    // El nombre del mecánico sí lo puede ver cualquiera: viene
-                    // de mecanicos_disponibles(), no de la tabla `usuarios`.
+                    // El nombre del mecánico lo puede ver cualquiera de los
+                    // tres roles: viene de personas_de_mis_vehiculos(), no de
+                    // la tabla `usuarios`.
                     val mecanicos = async {
                         if (vehiculo.mecanicoId == null) {
                             emptyList()
                         } else {
-                            runCatching { vehiculoRepository.obtenerMecanicos() }.getOrDefault(emptyList())
+                            runCatching { vehiculoRepository.obtenerPersonasDeMisVehiculos() }
+                                .getOrDefault(emptyList())
                         }
                     }
 

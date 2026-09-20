@@ -72,6 +72,8 @@ private const val ARG_USUARIO_ID = "usuarioId"
 private const val RUTA_REASIGNAR = "reasignar/{$ARG_VEHICULO_ID}"
 private const val RUTA_ASIGNAR_MECANICO = "asignar-mecanico/{$ARG_VEHICULO_ID}"
 private const val RUTA_REGISTRAR_MANTENIMIENTO = "registrar-mantenimiento/{$ARG_VEHICULO_ID}"
+private const val ARG_MANTENIMIENTO_ID = "mantenimientoId"
+private const val RUTA_EDITAR_MANTENIMIENTO = "editar-mantenimiento/{$ARG_MANTENIMIENTO_ID}"
 private const val RUTA_VEHICULO_NUEVO = "vehiculo-nuevo"
 private const val RUTA_VEHICULO_EDITAR = "vehiculo-editar/{$ARG_VEHICULO_ID}"
 private const val RUTA_ESTADO_CUENTA = "estado-cuenta/{$ARG_USUARIO_ID}"
@@ -95,6 +97,9 @@ private fun rutaReasignar(vehiculoId: String) = "reasignar/$vehiculoId"
 private fun rutaAsignarMecanico(vehiculoId: String) = "asignar-mecanico/$vehiculoId"
 
 private fun rutaRegistrarMantenimiento(vehiculoId: String) = "registrar-mantenimiento/$vehiculoId"
+
+private fun rutaEditarMantenimiento(mantenimientoId: String) =
+    "editar-mantenimiento/$mantenimientoId"
 
 private fun rutaVehiculoEditar(vehiculoId: String) = "vehiculo-editar/$vehiculoId"
 
@@ -312,12 +317,18 @@ private fun AppNavigation(
                     puedeRegistrarMantenimiento = true,
                     // El mecánico no se cambia a sí mismo (función asignar_mecanico).
                     puedeAsignarMecanico = rolActual != RolUsuario.mecanico,
+                    // Corregir o borrar un registro es solo del encargado
+                    // (políticas mantenimientos_update y _delete).
+                    puedeEditarMantenimiento = rolActual == RolUsuario.encargado,
                     onAtras = { navController.popBackStack() },
                     onRegistrarKilometraje = { id ->
                         navController.navigate(rutaRegistrarKilometraje(id))
                     },
                     onRegistrarMantenimiento = { id ->
                         navController.navigate(rutaRegistrarMantenimiento(id))
+                    },
+                    onEditarMantenimiento = { id ->
+                        navController.navigate(rutaEditarMantenimiento(id))
                     },
                     onReasignarConductor = { id -> navController.navigate(rutaReasignar(id)) },
                     onAsignarMecanico = { id -> navController.navigate(rutaAsignarMecanico(id)) },
@@ -419,6 +430,13 @@ private fun AppNavigation(
                     onRegistrarKilometraje = { id ->
                         navController.navigate(rutaRegistrarKilometraje(id))
                     },
+                    onGuardado = { navController.volverYRecargar() }
+                )
+            }
+            composable(RUTA_EDITAR_MANTENIMIENTO) { entrada ->
+                RegistrarMantenimientoScreen(
+                    mantenimientoId = entrada.arguments?.getString(ARG_MANTENIMIENTO_ID),
+                    onAtras = { navController.popBackStack() },
                     onGuardado = { navController.volverYRecargar() }
                 )
             }

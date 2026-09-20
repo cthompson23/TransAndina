@@ -46,8 +46,10 @@ import com.transandina.flotilla.domain.fechasDocumentos
 import com.transandina.flotilla.domain.formatearFecha
 import com.transandina.flotilla.domain.formatearFechaIso
 import com.transandina.flotilla.domain.formatearKilometrosConUnidad
+import com.transandina.flotilla.domain.aFechaIso
 import com.transandina.flotilla.domain.parsearFechaIso
 import com.transandina.flotilla.ui.components.BotonPrimario
+import com.transandina.flotilla.ui.components.CampoFecha
 import com.transandina.flotilla.ui.components.BotonSecundario
 import com.transandina.flotilla.ui.components.ChipEstado
 import com.transandina.flotilla.ui.components.ChipEstadoMantenimiento
@@ -62,6 +64,7 @@ import com.transandina.flotilla.ui.components.PestanasSegmentadas
 import com.transandina.flotilla.ui.components.PuntoGrafico
 import com.transandina.flotilla.ui.components.TarjetaTransAndina
 import com.transandina.flotilla.ui.components.TransAndinaTopBar
+import com.transandina.flotilla.ui.theme.FormaPildora
 import com.transandina.flotilla.ui.theme.TransAndinaFlotillaTheme
 import com.transandina.flotilla.ui.theme.TransAndinaTheme
 import java.time.format.TextStyle
@@ -83,6 +86,8 @@ enum class PestanaVehiculo { INFORMACION, HISTORIAL, KILOMETRAJE, DOCUMENTOS }
  *   202609201200).
  * @param puedeAsignarMecanico solo el encargado y el conductor del vehículo
  *   (función `asignar_mecanico`).
+ * @param puedeEditarMantenimiento solo el encargado (políticas
+ *   `mantenimientos_update` y `mantenimientos_delete`).
  */
 @Composable
 fun VehiculoDetalleScreen(
@@ -94,9 +99,11 @@ fun VehiculoDetalleScreen(
     puedeRegistrarKilometraje: Boolean = true,
     puedeRegistrarMantenimiento: Boolean = true,
     puedeAsignarMecanico: Boolean = false,
+    puedeEditarMantenimiento: Boolean = false,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (vehiculoId: String) -> Unit = {},
     onRegistrarMantenimiento: (vehiculoId: String) -> Unit = {},
+    onEditarMantenimiento: (mantenimientoId: String) -> Unit = {},
     onReasignarConductor: (vehiculoId: String) -> Unit = {},
     onAsignarMecanico: (vehiculoId: String) -> Unit = {},
     onEditarVehiculo: (vehiculoId: String) -> Unit = {},
@@ -116,9 +123,11 @@ fun VehiculoDetalleScreen(
         puedeRegistrarKilometraje = puedeRegistrarKilometraje,
         puedeRegistrarMantenimiento = puedeRegistrarMantenimiento,
         puedeAsignarMecanico = puedeAsignarMecanico,
+        puedeEditarMantenimiento = puedeEditarMantenimiento,
         onAtras = onAtras,
         onRegistrarKilometraje = onRegistrarKilometraje,
         onRegistrarMantenimiento = onRegistrarMantenimiento,
+        onEditarMantenimiento = onEditarMantenimiento,
         onReasignarConductor = onReasignarConductor,
         onAsignarMecanico = onAsignarMecanico,
         onEditarVehiculo = onEditarVehiculo
@@ -134,9 +143,11 @@ private fun ContenidoDetalle(
     puedeRegistrarKilometraje: Boolean = true,
     puedeRegistrarMantenimiento: Boolean = true,
     puedeAsignarMecanico: Boolean = false,
+    puedeEditarMantenimiento: Boolean = false,
     onAtras: () -> Unit = {},
     onRegistrarKilometraje: (String) -> Unit = {},
     onRegistrarMantenimiento: (String) -> Unit = {},
+    onEditarMantenimiento: (String) -> Unit = {},
     onReasignarConductor: (String) -> Unit = {},
     onAsignarMecanico: (String) -> Unit = {},
     onEditarVehiculo: (String) -> Unit = {}
@@ -215,7 +226,9 @@ private fun ContenidoDetalle(
                             mantenimientos = uiState.mantenimientos,
                             fotosPorMantenimiento = uiState.fotosPorMantenimiento,
                             puedeRegistrar = puedeRegistrarMantenimiento,
+                            puedeEditar = puedeEditarMantenimiento,
                             onRegistrar = { onRegistrarMantenimiento(vehiculo.id) },
+                            onEditar = onEditarMantenimiento,
                             onVerFoto = { fotoAmpliada = it }
                         )
 
@@ -355,16 +368,24 @@ private fun ColumnScope.PestanaInformacion(
     )
 }
 
-/** Historial con filtro por tipo (Figma `51:125`, `102:178`). */
+/**
+ * Historial con filtros por tipo y por rango de fechas (Figma `51:125`,
+ * `102:178`). Las fechas se guardan en ISO (`yyyy-MM-dd`), igual que
+ * `mantenimientos.fecha`, así que se comparan como texto sin convertir.
+ */
 @Composable
 private fun ColumnScope.PestanaHistorial(
     mantenimientos: List<Mantenimiento>,
     fotosPorMantenimiento: Map<String, List<String>>,
     puedeRegistrar: Boolean,
+    puedeEditar: Boolean,
     onRegistrar: () -> Unit,
+    onEditar: (String) -> Unit,
     onVerFoto: (String) -> Unit
 ) {
     var filtro by rememberSaveable { mutableStateOf<TipoMantenimiento?>(null) }
+    var desde by rememberSaveable { mutableStateOf<String?>(null) }
+    var hasta by rememberSaveable { mutableStateOf<String?>(null) }
     val opciones = listOf(null, TipoMantenimiento.preventivo, TipoMantenimiento.correctivo)
 
     if (puedeRegistrar) {
@@ -388,9 +409,62 @@ private fun ColumnScope.PestanaHistorial(
 
     Spacer(modifier = Modifier.height(12.dp))
 
-    val visibles = mantenimientos.filter { filtro == null || it.tipo == filtro }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        CampoFecha(
+            etiqueta = stringResource(R.string.historial_desde),
+            fecha = parsearFechaIso(desde),
+            onFechaCambia = { desde = aFechaIso(it) },
+            forma = FormaPildora,
+            modifier = Modifier.weight(1f)
+        )
+        CampoFecha(
+            etiqueta = stringResource(R.string.historial_hasta),
+            fecha = parsearFechaIso(hasta),
+            onFechaCambia = { hasta = aFechaIso(it) },
+            forma = FormaPildora,
+            modifier = Modifier.weight(1f)
+        )
+    }
+
+    if (desde != null || hasta != null) {
+        Spacer(modifier = Modifier.height(8.dp))
+        BotonSecundario(
+            texto = stringResource(R.string.historial_limpiar_fechas),
+            onClick = {
+                desde = null
+                hasta = null
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+
+    if (puedeEditar && mantenimientos.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.historial_editar_ayuda),
+            style = MaterialTheme.typography.bodySmall,
+            color = TransAndinaTheme.colores.textoSecundario
+        )
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    val visibles = mantenimientos.filter { mantenimiento ->
+        (filtro == null || mantenimiento.tipo == filtro) &&
+            (desde == null || mantenimiento.fecha >= desde!!) &&
+            (hasta == null || mantenimiento.fecha <= hasta!!)
+    }
     if (visibles.isEmpty()) {
-        EstadoVacio(mensaje = stringResource(R.string.historial_vacio))
+        EstadoVacio(
+            mensaje = if (mantenimientos.isEmpty()) {
+                stringResource(R.string.historial_vacio)
+            } else {
+                stringResource(R.string.historial_sin_coincidencias)
+            }
+        )
         return
     }
 
@@ -398,7 +472,12 @@ private fun ColumnScope.PestanaHistorial(
         TarjetaMantenimiento(
             mantenimiento = mantenimiento,
             fotos = fotosPorMantenimiento[mantenimiento.id].orEmpty(),
-            onVerFoto = onVerFoto
+            onVerFoto = onVerFoto,
+            onClick = if (puedeEditar) {
+                { onEditar(mantenimiento.id) }
+            } else {
+                null
+            }
         )
         Spacer(modifier = Modifier.height(12.dp))
     }

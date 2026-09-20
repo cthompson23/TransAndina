@@ -225,6 +225,13 @@ Así se pasa de 6 a 5 pestañas sin perder ninguna función.
 - Campos en una columna: nombre, cédula, correo, teléfono, contraseña, confirmar contraseña. Rol fijo "Encargado de flota" (no editable).
 - **Guardado** (decidido el 17/09/2026): un cliente de Supabase secundario, que no guarda sesión, hace `signUp` con el correo y la contraseña. Así la sesión del encargado actual no cambia. Con el id que devuelve, el cliente principal hace un *upsert* en `usuarios` con `rol = encargado`. Lo permite la política `usuarios_insert_encargado` (migración `202609171900_encargado.sql`).
 
+### Historial del vehículo: filtros (20/09/2026)
+
+La pestaña Historial filtra por **tipo** (chips) y por **rango de fechas**
+("Desde" y "Hasta", con "Limpiar fechas"), como pide la rúbrica del curso.
+Las fechas se comparan como texto ISO `yyyy-MM-dd`, que es como las guarda
+`mantenimientos.fecha`, así que no hay conversión de por medio.
+
 ### Reglas de estado de cuenta (decididas el 17/09/2026)
 - **Suspendido**: temporal y reversible. La cuenta no puede leer ni escribir datos.
 - **Desactivado**: permanente (la base rechaza reactivarla) y libera el vehículo asignado, que queda en el historial de reasignaciones.
@@ -287,6 +294,7 @@ mantenimientos y debe recibir notificaciones acerca de los carros asignados a
 | Estado de la cuenta | `ui/usuarios/EstadoCuentaScreen.kt` | `estado-cuenta/{id}` |
 | Registrar administrador | `ui/usuarios/RegistrarAdministradorScreen.kt` | `registrar-administrador` |
 | Asignar mecánico | `ui/vehiculo/AsignarMecanicoScreen.kt` | `asignar-mecanico/{id}` |
+| Editar / eliminar mantenimiento | `ui/mantenimiento/RegistrarMantenimientoScreen.kt` con `mantenimientoId` | `editar-mantenimiento/{id}` |
 | Inicio del mecánico | `ui/flotilla/FlotillaScreen.kt` con `puedeRegistrarVehiculo = false` | pestaña `inicio` |
 
 Decisiones tomadas al implementar:
@@ -319,6 +327,7 @@ Decisiones tomadas al implementar:
   - Campos además del Figma: **Taller** (obligatorio, es el "lugar") y **Descripción** (opcional). El **costo** es obligatorio, pero puede ser 0.
   - El kilometraje del servicio no puede ser mayor a la última lectura del vehículo, porque el odómetro solo sube. Si lo es, la pantalla ofrece registrar primero la lectura y al volver acepta el servicio.
   - Debajo se muestra el **próximo servicio estimado** de la categoría elegida.
+  - **Corregir o borrar** un registro es solo del encargado (`mantenimientos_update` y `mantenimientos_delete`): toca la tarjeta en la pestaña Historial y abre el mismo formulario en modo edición, con el botón "Eliminar mantenimiento" y su confirmación. Al borrar también se quitan los archivos del bucket. Las fotos no se pueden cambiar al corregir, porque `fotos_insert` solo deja adjuntar a quien registró el servicio.
   - **Fotos**: hasta 3, JPG o PNG. Antes de subirlas se reducen a 1600 px y se guardan como JPEG en el bucket `mantenimientos`, con la ruta `<vehiculo>/<mantenimiento>/<uuid>.jpg`. Si una foto falla, el mantenimiento igual queda guardado y se avisa. Se ven como miniaturas en la pestaña Historial del vehículo y a pantalla completa al tocarlas; como el bucket es privado, cada foto se pide con una URL firmada que vence en una hora (Coil las carga).
 - **DocumentosVehiculo (`87:135`)**: se muestra también "Permiso de carga" (`vehiculos.fecha_permiso_carga`).
 
@@ -336,6 +345,7 @@ Verificado contra la base real el 17/09/2026. Migraciones en `supabase/migration
 | `202609172100_encargado_registra_mantenimientos.sql` | El encargado también puede registrar mantenimientos | Aplicada (17/09/2026) |
 | `202609172200_encargado_registra_kilometraje.sql` | El encargado también puede registrar kilometraje | Aplicada (17/09/2026) |
 | `202609201200_mecanico.sql` | Mecánico responsable del vehículo, sus permisos, sus avisos y la función para asignarlo | **Pendiente**: sin ella el mecánico no ve nada y los selectores salen vacíos |
+| `202609202000_nombres_de_la_flotilla.sql` | `personas_de_mis_vehiculos()`: nombres del conductor y del mecánico de los vehículos que uno ya puede ver | **Pendiente**: sin ella, al mecánico le salen sus vehículos como "Sin conductor" |
 
 El proyecto de Supabase **no pide confirmar el correo**, así que al registrarse
 queda la sesión abierta y la app guarda el perfil enseguida. Por eso se borró la
@@ -344,7 +354,16 @@ de git, commit `8a63686`): resolvía un problema que con esta configuración no
 existe, y aplicada rompía el registro. Si algún día se activa la confirmación de
 correo, hay que retomarla junto con el cambio en la app, no sola.
 
-Datos de ejemplo (no son migraciones) en `supabase/datos_ejemplo/`: `mantenimientos_ejemplo.sql` inserta 8 mantenimientos por vehículo activo, `borrar_mantenimientos_ejemplo.sql` los quita y `asignar_mecanico_ejemplo.sql` reparte los vehículos sin mecánico entre los mecánicos activos.
+Datos de ejemplo (no son migraciones) en `supabase/datos_ejemplo/`:
+
+| Archivo | Qué hace |
+|---|---|
+| `demostracion.sql` | Deja la flotilla lista para enseñarla: fechas de documentos que producen alertas críticas y próximas, 6 meses de kilometraje para la gráfica, y mantenimientos que dan los tres estados del semáforo (atrasado, próximo, al día). Se puede correr varias veces. |
+| `borrar_demostracion.sql` | Quita lo anterior (deja el kilometraje y las fechas). |
+| `asignar_mecanico_ejemplo.sql` | Reparte los vehículos sin mecánico entre los mecánicos activos. |
+| `mantenimientos_ejemplo.sql` / `borrar_mantenimientos_ejemplo.sql` | Versión anterior, más simple: 8 mantenimientos por vehículo. |
+
+Ninguno siembra **fotos**: el bucket guarda los archivos fuera de Postgres, así que una fila de `mantenimiento_fotos` sin archivo se vería como imagen rota. Las fotos se registran desde la app.
 
 Decisiones de modelo:
 

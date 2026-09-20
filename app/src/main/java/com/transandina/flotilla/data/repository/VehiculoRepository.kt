@@ -1,7 +1,7 @@
 package com.transandina.flotilla.data.repository
 
 import com.transandina.flotilla.data.model.AsignarMecanicoParams
-import com.transandina.flotilla.data.model.MecanicoDisponible
+import com.transandina.flotilla.data.model.PersonaResumen
 import com.transandina.flotilla.data.model.ReasignarConductorParams
 import com.transandina.flotilla.data.model.Vehiculo
 import com.transandina.flotilla.data.model.VehiculoPayload
@@ -97,9 +97,22 @@ class VehiculoRepository {
      * función `mecanicos_disponibles`, porque ni el conductor ni el mecánico
      * pueden leer la tabla `usuarios` completa.
      */
-    suspend fun obtenerMecanicos(): List<MecanicoDisponible> {
+    suspend fun obtenerMecanicos(): List<PersonaResumen> {
         return SupabaseProvider.client.postgrest
             .rpc("mecanicos_disponibles")
+            .decodeList()
+    }
+
+    /**
+     * Id y nombre de los conductores y mecánicos de los vehículos que quien
+     * pregunta puede ver. Hace falta porque `usuarios_select` solo le
+     * devuelve su propia fila a quien no es encargado, y sin esto la lista
+     * del mecánico mostraba "Sin conductor" en vehículos que sí lo tienen
+     * (migración 202609202000).
+     */
+    suspend fun obtenerPersonasDeMisVehiculos(): List<PersonaResumen> {
+        return SupabaseProvider.client.postgrest
+            .rpc("personas_de_mis_vehiculos")
             .decodeList()
     }
 
