@@ -58,7 +58,17 @@ class RegistroViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
-                authRepository.registrarUsuario(s.email.trim(), s.password)
+                val email = s.email.trim()
+                // Si un intento anterior creó la cuenta de Auth pero falló al
+                // guardar el perfil, la sesión quedó abierta con ese mismo
+                // correo. Registrarla de nuevo la rechazaría por duplicada,
+                // así que se reaprovecha y solo se crea el perfil.
+                val sesionDelMismoCorreo = authRepository.usuarioActualId()
+                    ?.takeIf { authRepository.usuarioActualEmail().equals(email, ignoreCase = true) }
+
+                if (sesionDelMismoCorreo == null) {
+                    authRepository.registrarUsuario(email, s.password)
+                }
 
                 val usuarioId = authRepository.usuarioActualId()
                 if (usuarioId == null) {
@@ -89,10 +99,38 @@ class RegistroViewModel(
 
                 _uiState.update { it.copy(cargando = false, registroExitoso = true) }
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(cargando = false, error = "No se pudo crear la cuenta. Verifica los datos o tu conexión.")
-                }
+                _uiState.update { it.copy(cargando = false, error = mensajeDeError(e)) }
             }
+        }
+    }
+
+    /**
+     * Traduce lo que devuelve Supabase. Antes todo caía en un mismo mensaje
+     * genérico y no había forma de saber si el problema era el correo
+     * repetido, la cédula repetida o la conexión.
+     */
+    private fun mensajeDeError(e: Exception): String {
+        val detalle = e.message.orEmpty()
+        return when {
+            detalle.contains("usuarios_cedula_key") ->
+                "Ya existe una cuenta con esa cédula"
+            detalle.contains("usuarios_email_key") ->
+                "Ya existe una cuenta con ese correo"
+            detalle.contains("already registered", ignoreCase = true) ||
+                detalle.contains("already exists", ignoreCase = true) ||
+                detalle.contains("user_already", ignoreCase = true) ->
+                "Ya existe una cuenta con ese correo. Inicia sesión o usa otro."
+            detalle.contains("rate limit", ignoreCase = true) ||
+                detalle.contains("too many", ignoreCase = true) ->
+                "Supabase está limitando los registros. Espera un minuto y vuelve a intentar."
+            detalle.contains("password", ignoreCase = true) ->
+                "La contraseña no cumple los requisitos de seguridad"
+            detalle.contains("email", ignoreCase = true) &&
+                detalle.contains("invalid", ignoreCase = true) ->
+                "Supabase rechazó ese correo. Prueba con otro dominio."
+            detalle.contains("row-level security", ignoreCase = true) ->
+                "La cuenta se creó, pero no se pudo guardar el perfil. Contacta al encargado de flota."
+            else -> "No se pudo crear la cuenta. Verifica los datos o tu conexión."
         }
     }
 

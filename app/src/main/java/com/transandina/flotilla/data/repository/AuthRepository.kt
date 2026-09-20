@@ -63,4 +63,7 @@ class AuthRepository {
 
     fun usuarioActualId(): String? =
         SupabaseProvider.client.auth.currentUserOrNull()?.id
+
+    fun usuarioActualEmail(): String? =
+        SupabaseProvider.client.auth.currentUserOrNull()?.email
 }
